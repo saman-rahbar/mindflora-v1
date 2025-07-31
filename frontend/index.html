@@ -916,7 +916,7 @@
                     })
                 });
 
-                if (response.ok) {
+                if (response && response.success) {
                     showMessage('Mood tracked successfully!', 'success');
                     selectedMood = null;
                     // Reset mood selection
@@ -927,7 +927,8 @@
                     showMessage('Failed to track mood', 'error');
                 }
             } catch (error) {
-                showMessage('Error tracking mood: ' + error.message, 'error');
+                console.error('Mood tracking error:', error);
+                showMessage('Error tracking mood: ' + (error.message || 'Unknown error'), 'error');
             }
         }
 

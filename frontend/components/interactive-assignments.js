@@ -213,7 +213,7 @@ class InteractiveAssignments {
                     </div>
                     <div style="padding: 40px; text-align: center;">
                         <p>Error rendering assignments: ${error.message}</p>
-                        <button onclick="window.interactiveAssignments.render()">Try Again</button>
+                        <button class="try-again-btn">Try Again</button>
                     </div>
                 </div>
             `;
@@ -227,7 +227,7 @@ class InteractiveAssignments {
                     <i class="fas fa-clipboard-list"></i>
                     <h3>No assignments yet</h3>
                     <p>Start a therapy session to receive personalized assignments!</p>
-                    <button class="btn btn-primary" onclick="interactiveAssignments.startTherapySession()">
+                    <button class="btn btn-primary start-therapy-btn">
                         <i class="fas fa-comments"></i> Start Therapy Session
                     </button>
                 </div>
@@ -235,9 +235,9 @@ class InteractiveAssignments {
         }
 
         return this.assignments.map(assignment => `
-            <div class="assignment-card ${assignment.status}" 
+                            <div class="assignment-card ${assignment.status}" 
                  data-category="${assignment.category || 'general'}"
-                 onclick="interactiveAssignments.openAssignment('${assignment.id}')">
+                 data-assignment-id="${assignment.id}">
                 <div class="assignment-header">
                     <div class="assignment-icon" style="color: ${this.categories[assignment.category]?.color || '#6C757D'}">
                         <i class="${this.categories[assignment.category]?.icon || 'fas fa-star'}"></i>
@@ -373,6 +373,39 @@ class InteractiveAssignments {
                 if (e.target === modal) {
                     this.hideAssignmentModal();
                 }
+            });
+        }
+
+        // Assignment card click handlers
+        const assignmentCards = document.querySelectorAll('.assignment-card');
+        assignmentCards.forEach(card => {
+            card.addEventListener('click', (e) => {
+                // Don't trigger if clicking on buttons inside the card
+                if (e.target.closest('.btn-start') || e.target.closest('.btn-view')) {
+                    return;
+                }
+                const assignmentId = card.getAttribute('data-assignment-id');
+                if (assignmentId) {
+                    this.openAssignment(assignmentId);
+                }
+            });
+        });
+
+        // Try again button
+        const tryAgainBtn = document.querySelector('.try-again-btn');
+        if (tryAgainBtn) {
+            tryAgainBtn.addEventListener('click', () => {
+                this.render();
+                this.setupEventListeners();
+            });
+        }
+
+        // Start therapy session button
+        const startTherapyBtn = document.querySelector('.start-therapy-btn');
+        if (startTherapyBtn) {
+            startTherapyBtn.addEventListener('click', () => {
+                // Switch to therapy tab
+                showSection('therapy');
             });
         }
     }
@@ -515,9 +548,9 @@ class InteractiveAssignments {
                             </span>
                         </div>
                     </div>
-                    <button class="close-btn" onclick="interactiveAssignments.closeWorkspace()">
-                        <i class="fas fa-times"></i>
-                    </button>
+                                    <button class="close-btn" data-action="close-workspace">
+                    <i class="fas fa-times"></i>
+                </button>
                 </div>
 
                 <!-- Step-by-step guide -->
@@ -575,9 +608,9 @@ class InteractiveAssignments {
                                     </label>
                                 </div>
                             </div>
-                            <button class="next-step-btn" onclick="interactiveAssignments.nextStep(2)" disabled>
-                                <i class="fas fa-arrow-right"></i> Start Practice
-                            </button>
+                                            <button class="next-step-btn" data-step="2" disabled>
+                    <i class="fas fa-arrow-right"></i> Start Practice
+                </button>
                         </div>
                     </div>
 
@@ -615,7 +648,7 @@ class InteractiveAssignments {
                                 <textarea id="assignment-notes" placeholder="What am I noticing? How am I feeling? What thoughts are coming up?"></textarea>
                             </div>
 
-                            <button class="next-step-btn" onclick="interactiveAssignments.nextStep(3)">
+                            <button class="next-step-btn" data-step="3">
                                 <i class="fas fa-arrow-right"></i> Move to Reflection
                             </button>
                         </div>
@@ -631,7 +664,7 @@ class InteractiveAssignments {
                                 ${this.renderReflectionQuestions(assignment)}
                             </div>
 
-                            <button class="next-step-btn" onclick="interactiveAssignments.nextStep(4)">
+                            <button class="next-step-btn" data-step="4">
                                 <i class="fas fa-arrow-right"></i> Finish Up
                             </button>
                         </div>
@@ -727,6 +760,9 @@ class InteractiveAssignments {
         
         // Setup completion buttons
         this.setupCompletionButtons();
+        
+        // Setup workspace navigation buttons
+        this.setupWorkspaceNavigation();
     }
 
     setupCompletionButtons() {
@@ -780,6 +816,26 @@ class InteractiveAssignments {
         } else {
             console.warn('Save button not found');
         }
+    }
+
+    setupWorkspaceNavigation() {
+        // Close workspace button
+        const closeBtn = document.querySelector('.close-btn[data-action="close-workspace"]');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                this.render();
+                this.setupEventListeners();
+            });
+        }
+
+        // Next step buttons
+        const nextStepBtns = document.querySelectorAll('.next-step-btn[data-step]');
+        nextStepBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const step = parseInt(btn.getAttribute('data-step'));
+                this.nextStep(step);
+            });
+        });
     }
 
     setupPreparationChecklist() {
