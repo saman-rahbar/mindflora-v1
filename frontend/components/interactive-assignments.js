@@ -408,6 +408,34 @@ class InteractiveAssignments {
                 showSection('therapy');
             });
         }
+
+        // Modal action buttons
+        document.querySelectorAll('.start-assignment-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const assignmentId = e.target.closest('.start-assignment-btn').getAttribute('data-assignment-id');
+                if (assignmentId) {
+                    this.startAssignment(assignmentId);
+                }
+            });
+        });
+
+        document.querySelectorAll('.mark-complete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const assignmentId = e.target.closest('.mark-complete-btn').getAttribute('data-assignment-id');
+                if (assignmentId) {
+                    this.markComplete(assignmentId);
+                }
+            });
+        });
+
+        document.querySelectorAll('.log-progress-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const assignmentId = e.target.closest('.log-progress-btn').getAttribute('data-assignment-id');
+                if (assignmentId) {
+                    this.logProgress(assignmentId);
+                }
+            });
+        });
     }
 
     filterByCategory(category) {
@@ -490,13 +518,13 @@ class InteractiveAssignments {
                 ` : ''}
 
                 <div class="assignment-actions">
-                    <button class="btn btn-primary" onclick="interactiveAssignments.startAssignment('${assignment.id}')">
+                    <button class="btn btn-primary start-assignment-btn" data-assignment-id="${assignment.id}">
                         <i class="fas fa-play"></i> Start Assignment
                     </button>
-                    <button class="btn btn-secondary" onclick="interactiveAssignments.markComplete('${assignment.id}')">
+                    <button class="btn btn-secondary mark-complete-btn" data-assignment-id="${assignment.id}">
                         <i class="fas fa-check"></i> Mark Complete
                     </button>
-                    <button class="btn btn-outline" onclick="interactiveAssignments.logProgress('${assignment.id}')">
+                    <button class="btn btn-outline log-progress-btn" data-assignment-id="${assignment.id}">
                         <i class="fas fa-edit"></i> Log Progress
                     </button>
                 </div>
@@ -1140,6 +1168,54 @@ class InteractiveAssignments {
     startTherapySession() {
         // Navigate to therapy session
         window.location.hash = '#therapy';
+    }
+
+    markComplete(assignmentId) {
+        const assignment = this.assignments.find(a => a.id === assignmentId);
+        if (!assignment) return;
+
+        assignment.status = 'completed';
+        assignment.completed_at = new Date().toISOString();
+        assignment.progress = 100;
+
+        // Update in backend
+        this.updateAssignment(assignment);
+
+        // Show completion message
+        this.showCompletionMessage(assignment);
+
+        // Hide modal
+        this.hideAssignmentModal();
+
+        // Refresh assignments list
+        this.render();
+        this.setupEventListeners();
+    }
+
+    logProgress(assignmentId) {
+        const assignment = this.assignments.find(a => a.id === assignmentId);
+        if (!assignment) return;
+
+        // For now, just increment progress by 25%
+        assignment.progress = Math.min(assignment.progress + 25, 100);
+        
+        if (assignment.progress >= 100) {
+            assignment.status = 'completed';
+            assignment.completed_at = new Date().toISOString();
+        }
+
+        // Update in backend
+        this.updateAssignment(assignment);
+
+        // Show progress message
+        this.showMessage(`Progress updated! ${assignment.progress}% complete`, 'success');
+
+        // Hide modal
+        this.hideAssignmentModal();
+
+        // Refresh assignments list
+        this.render();
+        this.setupEventListeners();
     }
 }
 
