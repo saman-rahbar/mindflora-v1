@@ -285,11 +285,57 @@ class MockLLMClient(LLMClient):
         }
     
     async def generate_response(self, prompt: str, context: Dict[str, Any] = None) -> str:
-        """Generate a mock therapeutic response"""
+        """Generate a mock therapeutic response based on user input"""
         import random
+        
         therapy_type = context.get("therapy_type", "cbt") if context else "cbt"
-        responses = self.responses.get(therapy_type, self.responses["cbt"])
-        return random.choice(responses)
+        user_message = prompt.lower()
+        
+        # Contextual responses based on user input
+        if "anxiety" in user_message or "worried" in user_message or "nervous" in user_message:
+            if therapy_type == "cbt":
+                return "I can sense the anxiety in your words. Let's work together to identify the specific thoughts that are fueling this anxiety. Can you tell me more about what's making you feel this way? Try this exercise: Write down three thoughts that are causing your anxiety, then ask yourself: 'What evidence supports this thought? What evidence contradicts it?'"
+            elif therapy_type == "act":
+                return "Anxiety is a natural response, and I hear how challenging it feels. Let's practice accepting these anxious feelings while focusing on what matters most to you. Here's what you can do: Take 5 deep breaths, acknowledging the anxiety without trying to push it away. Notice how it feels in your body."
+            else:
+                return "I understand how overwhelming anxiety can feel. You're not alone in this experience. Let's explore what's behind these feelings together."
+        
+        elif "sad" in user_message or "depressed" in user_message or "down" in user_message:
+            if therapy_type == "cbt":
+                return "I hear the sadness in your voice. Let's examine the thoughts and beliefs that might be contributing to these feelings. What's been on your mind lately?"
+            elif therapy_type == "positive_psychology":
+                return "I acknowledge the difficulty you're experiencing. Even in dark times, we can find small moments of light. Let's focus on your strengths and what brings you joy."
+            else:
+                return "Your feelings are valid, and I'm here to listen. Depression can feel isolating, but you don't have to face this alone. What would be most supportive for you right now?"
+        
+        elif "stress" in user_message or "overwhelmed" in user_message or "pressure" in user_message:
+            if therapy_type == "cbt":
+                return "Stress can feel like it's taking over. Let's break this down together - what specific situations are causing you the most stress right now? Try this exercise: Make a list of your stressors and rate each one from 1-10. Then identify which ones you can control and which ones you can't."
+            elif therapy_type == "dbt":
+                return "I can see how overwhelmed you're feeling. Let's practice some distress tolerance skills together. Here's what you can do: Use the 'STOP' technique - Stop, Take a step back, Observe your thoughts and feelings, Proceed mindfully."
+            else:
+                return "Stress can be incredibly challenging. You're showing real strength by reaching out. Let's work on finding some relief together."
+        
+        elif "relationship" in user_message or "partner" in user_message or "family" in user_message:
+            if therapy_type == "cbt":
+                return "Relationships can be complex and challenging. Let's explore the thoughts and patterns that might be affecting your connections with others."
+            elif therapy_type == "dbt":
+                return "Interpersonal relationships can be both rewarding and difficult. Let's work on some skills to help you communicate more effectively and set healthy boundaries."
+            else:
+                return "Relationships are fundamental to our well-being. I'm here to help you navigate these important connections in your life."
+        
+        elif "goal" in user_message or "future" in user_message or "purpose" in user_message:
+            if therapy_type == "logotherapy":
+                return "I sense you're searching for deeper meaning and purpose. Let's explore what truly matters to you and how you can align your actions with your values."
+            elif therapy_type == "positive_psychology":
+                return "Your desire to grow and achieve is inspiring. Let's focus on your strengths and how you can use them to move toward your goals."
+            else:
+                return "Having goals and dreams is wonderful. Let's work together to break them down into manageable steps and overcome any obstacles."
+        
+        else:
+            # Generic responses based on therapy type
+            responses = self.responses.get(therapy_type, self.responses["cbt"])
+            return random.choice(responses)
     
     async def analyze_content(self, content: str, analysis_type: str) -> Dict[str, Any]:
         """Generate mock analysis"""

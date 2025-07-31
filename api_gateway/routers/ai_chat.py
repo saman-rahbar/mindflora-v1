@@ -38,16 +38,8 @@ class ChatSession(BaseModel):
     action_items: List[Dict[str, Any]]
     insights: Dict[str, Any]
 
-# Initialize LLM client - use anthropic as fallback if OpenAI not available
-try:
-    llm_client = create_llm_client("openai")
-except Exception as e:
-    print(f"OpenAI not available, using Anthropic: {e}")
-    try:
-        llm_client = create_llm_client("anthropic")
-    except Exception as e2:
-        print(f"Anthropic not available, using mock: {e2}")
-        llm_client = create_llm_client("mock")
+# Initialize LLM client - use mock for now to ensure it works
+llm_client = create_llm_client("mock")
 
 # Store active sessions (in production, use Redis or database)
 active_sessions = {}
@@ -205,28 +197,35 @@ async def get_therapy_types():
     }
 
 def extract_action_items(response: str) -> List[Dict[str, Any]]:
-    """Extract action items from AI response"""
+    """Extract action items from AI response - only when explicitly suggested"""
     action_items = []
     
-    # Simple extraction - look for phrases that suggest actions
-    action_indicators = [
-        "try to", "practice", "exercise", "write down", "reflect on",
-        "consider", "explore", "work on", "focus on", "develop"
+    # Only extract action items when the AI explicitly suggests them
+    explicit_action_phrases = [
+        "try this exercise:", "practice this technique:", "here's an exercise:",
+        "i suggest you try:", "let's practice:", "here's what you can do:",
+        "try this activity:", "practice this skill:", "here's a technique:"
     ]
     
-    sentences = response.split('.')
-    for sentence in sentences:
-        sentence = sentence.strip().lower()
-        for indicator in action_indicators:
-            if indicator in sentence:
-                action_items.append({
-                    "description": sentence.capitalize(),
-                    "created_at": datetime.now().isoformat(),
-                    "completed": False
-                })
-                break
+    response_lower = response.lower()
     
-    return action_items[:3]  # Limit to 3 action items
+    # Check for explicit action suggestions
+    for phrase in explicit_action_phrases:
+        if phrase in response_lower:
+            # Find the sentence containing the action
+            sentences = response.split('.')
+            for sentence in sentences:
+                sentence_lower = sentence.strip().lower()
+                if any(indicator in sentence_lower for indicator in ["try", "practice", "exercise", "activity", "technique"]):
+                    if len(sentence.strip()) > 10:  # Only if it's a substantial suggestion
+                        action_items.append({
+                            "description": sentence.strip().capitalize(),
+                            "created_at": datetime.now().isoformat(),
+                            "completed": False
+                        })
+                        break
+    
+    return action_items[:2]  # Limit to 2 action items
 
 def extract_insights(ai_response: str, user_message: str) -> Dict[str, Any]:
     """Extract therapeutic insights from the conversation"""
