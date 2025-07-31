@@ -1371,8 +1371,14 @@
                     // Store the assignment locally for immediate use
                     const createdAssignment = response.data;
                     localStorage.setItem('currentAssignment', JSON.stringify(createdAssignment));
-                    // Switch to assignments tab
+                    // Switch to assignments tab and force refresh
                     showSection('assignments');
+                    // Force reload assignments after a short delay
+                    setTimeout(() => {
+                        if (window.interactiveAssignments) {
+                            window.interactiveAssignments.refreshAssignments();
+                        }
+                    }, 500);
                 } else {
                     // Try to create assignment locally if API fails
                     console.log('API failed, creating assignment locally');
@@ -1396,8 +1402,14 @@
                     };
                     localStorage.setItem('currentAssignment', JSON.stringify(localAssignment));
                     showMessage('Assignment created! Navigate to Assignments tab to start.', 'success');
-                    // Switch to assignments tab
+                    // Switch to assignments tab and force refresh
                     showSection('assignments');
+                    // Force reload assignments after a short delay
+                    setTimeout(() => {
+                        if (window.interactiveAssignments) {
+                            window.interactiveAssignments.refreshAssignments();
+                        }
+                    }, 500);
                 }
             } catch (error) {
                 console.error('Full error object:', error);

@@ -35,6 +35,13 @@ class InteractiveAssignments {
         console.log('InteractiveAssignments initialization complete');
     }
 
+    async refreshAssignments() {
+        console.log('refreshAssignments: Force refreshing assignments');
+        await this.loadAssignments();
+        this.render();
+        console.log('refreshAssignments: Refresh complete');
+    }
+
     async loadAssignments() {
         try {
             console.log('loadAssignments: Starting to load assignments');
@@ -50,6 +57,10 @@ class InteractiveAssignments {
                     const parsedAssignment = JSON.parse(currentAssignment);
                     assignments.push(parsedAssignment);
                     console.log('loadAssignments: Added assignment from localStorage:', parsedAssignment);
+                    
+                    // Mark this as the active assignment
+                    parsedAssignment.isActive = true;
+                    this.currentAssignment = parsedAssignment;
                 } catch (parseError) {
                     console.error('loadAssignments: Error parsing localStorage assignment:', parseError);
                 }
@@ -235,7 +246,10 @@ class InteractiveAssignments {
                     </div>
                 </div>
                 <div class="assignment-content">
-                    <h4>${assignment.title}</h4>
+                    <h4>
+                        ${assignment.title}
+                        ${assignment.isActive ? '<span class="therapy-badge"><i class="fas fa-heart"></i> Therapy</span>' : ''}
+                    </h4>
                     <p>${assignment.description}</p>
                     <div class="assignment-meta">
                         <span class="assignment-category">${assignment.category || 'General'}</span>
