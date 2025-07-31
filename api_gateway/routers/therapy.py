@@ -1,9 +1,10 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 import asyncio
+import logging
 
 router = APIRouter()
 
@@ -85,6 +86,10 @@ class UserProfile(BaseModel):
 
 # Initialize memory service
 memory_service = MemoryService()
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @router.post("/session", response_model=TherapySessionResponse)
 async def create_therapy_session(
@@ -517,6 +522,189 @@ async def get_therapy_recommendations(current_user: dict = Depends(get_current_u
         }
     }
 
+@router.post("/chat")
+async def chat_with_therapist(
+    request: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Chat with AI therapist and get personalized responses"""
+    try:
+        # Extract user context for personalization
+        user_context = getUserContext(current_user)
+        
+        # Create personalized chat request
+        chat_request = {
+            "message": request.get("message"),
+            "session_id": request.get("session_id"),
+            "therapist_personality": request.get("therapist_personality", {
+                "name": "Dr. Sarah",
+                "style": "compassionate",
+                "approach": "evidence-based"
+            }),
+            "conversation_history": request.get("conversation_history", []),
+            "user_context": user_context
+        }
+        
+        # Get AI response from therapy agent
+        from therapy_agent_services.cbt_agent import CBTAgent
+        agent = CBTAgent()
+        
+        response = await agent.process_chat_request(chat_request)
+        
+        # Extract action items from response
+        action_items = extract_action_items(response.get("content", ""))
+        
+        return {
+            "success": True,
+            "content": response.get("content"),
+            "action_items": action_items,
+            "session_id": request.get("session_id")
+        }
+    except Exception as e:
+        logger.error(f"Error in chat with therapist: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error processing chat request")
+
+@router.get("/assignments")
+async def get_assignments(
+    current_user: dict = Depends(get_current_user)
+):
+    """Get user's assignments"""
+    try:
+        # Mock assignments data - in production, this would come from database
+        assignments = [
+            {
+                "id": "1",
+                "title": "Daily Mood Check-in",
+                "description": "Take 5 minutes to reflect on your mood and write down 3 things you're grateful for.",
+                "category": "homework",
+                "status": "active",
+                "estimated_duration": 15,
+                "deadline": (datetime.now() + timedelta(days=1)).isoformat(),
+                "progress": 0,
+                "instructions": "Find a quiet place, take deep breaths, and reflect on your day.",
+                "materials": ["Journal", "Quiet space"],
+                "progress_questions": [
+                    "How are you feeling about this assignment?",
+                    "What challenges did you encounter?",
+                    "What insights did you gain?",
+                    "How can you apply this learning?"
+                ]
+            },
+            {
+                "id": "2",
+                "title": "Mindfulness Meditation",
+                "description": "Practice mindfulness meditation for 10 minutes focusing on your breath.",
+                "category": "meditation",
+                "status": "pending",
+                "estimated_duration": 10,
+                "deadline": (datetime.now() + timedelta(days=2)).isoformat(),
+                "progress": 0,
+                "instructions": "Sit comfortably, close your eyes, and focus on your breathing.",
+                "materials": ["Comfortable space", "Timer"],
+                "progress_questions": [
+                    "How did you feel during the meditation?",
+                    "What thoughts came up?",
+                    "How did you handle distractions?",
+                    "What did you learn about your mind?"
+                ]
+            }
+        ]
+        
+        return {"success": True, "data": assignments}
+    except Exception as e:
+        logger.error(f"Error getting assignments: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error retrieving assignments")
+
+@router.post("/assignments")
+async def create_assignment(
+    assignment_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new assignment"""
+    try:
+        # In production, save to database
+        assignment = {
+            "id": str(uuid.uuid4()),
+            "user_id": current_user["id"],
+            "title": assignment_data.get("title"),
+            "description": assignment_data.get("description"),
+            "category": assignment_data.get("category", "general"),
+            "status": "pending",
+            "estimated_duration": assignment_data.get("estimated_duration", 30),
+            "deadline": assignment_data.get("deadline"),
+            "progress": 0,
+            "created_at": datetime.now().isoformat()
+        }
+        
+        return {"success": True, "data": assignment}
+    except Exception as e:
+        logger.error(f"Error creating assignment: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error creating assignment")
+
+@router.put("/assignments/{assignment_id}")
+async def update_assignment(
+    assignment_id: str,
+    assignment_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update an assignment"""
+    try:
+        # In production, update in database
+        return {"success": True, "data": assignment_data}
+    except Exception as e:
+        logger.error(f"Error updating assignment: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error updating assignment")
+
+@router.post("/action-items")
+async def create_action_item(
+    action_item_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new action item from chat"""
+    try:
+        action_item = {
+            "id": str(uuid.uuid4()),
+            "user_id": current_user["id"],
+            "title": action_item_data.get("title", "Action Item"),
+            "description": action_item_data.get("description"),
+            "deadline": action_item_data.get("deadline"),
+            "completed": False,
+            "created_at": datetime.now().isoformat(),
+            "session_id": action_item_data.get("session_id")
+        }
+        
+        return {"success": True, "data": action_item}
+    except Exception as e:
+        logger.error(f"Error creating action item: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error creating action item")
+
+@router.put("/action-items/{item_id}")
+async def update_action_item(
+    item_id: str,
+    action_item_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update an action item"""
+    try:
+        # In production, update in database
+        return {"success": True, "data": action_item_data}
+    except Exception as e:
+        logger.error(f"Error updating action item: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error updating action item")
+
+@router.delete("/action-items/{item_id}")
+async def delete_action_item(
+    item_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete an action item"""
+    try:
+        # In production, delete from database
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"Error deleting action item: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error deleting action item")
+
 def analyze_onboarding_survey(survey: OnboardingSurvey) -> List[str]:
     """Analyze onboarding survey to recommend therapy modalities"""
     recommendations = []
@@ -632,3 +820,52 @@ def analyze_mood_trends(sessions: List[Dict[str, Any]]) -> Dict[str, Any]:
         "average_improvement": avg_improvement,
         "sessions_with_mood_data": len(mood_improvements)
     } 
+
+def extract_action_items(content):
+    """Extract action items from AI response"""
+    action_items = []
+    
+    # Simple extraction logic - in production, use more sophisticated NLP
+    lines = content.split('\n')
+    for line in lines:
+        if any(keyword in line.lower() for keyword in ['try', 'practice', 'do', 'complete', 'schedule']):
+            action_items.append({
+                "title": "Action Item",
+                "description": line.strip(),
+                "icon": "fas fa-lightbulb"
+            })
+    
+    return action_items
+
+def getUserContext(current_user: dict) -> str:
+    """Get user context string for personalization"""
+    context_parts = []
+    
+    # Add user name
+    if current_user.get("first_name"):
+        if current_user.get("last_name"):
+            context_parts.append(f"User: {current_user['first_name']} {current_user['last_name']}")
+        else:
+            context_parts.append(f"User: {current_user['first_name']}")
+    elif current_user.get("username"):
+        context_parts.append(f"User: {current_user['username']}")
+    
+    # Add age
+    if current_user.get("age"):
+        context_parts.append(f"Age: {current_user['age']}")
+    
+    # Add education
+    if current_user.get("education_level"):
+        education_map = {
+            'high_school': 'High School',
+            'some_college': 'Some College',
+            'associates': "Associate's Degree",
+            'bachelors': "Bachelor's Degree",
+            'masters': "Master's Degree",
+            'doctorate': 'Doctorate',
+            'other': 'Other'
+        }
+        education = education_map.get(current_user['education_level'], current_user['education_level'])
+        context_parts.append(f"Education: {education}")
+    
+    return "\n".join(context_parts) 

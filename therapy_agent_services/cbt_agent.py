@@ -246,4 +246,70 @@ Keep the response warm, professional, and clinically appropriate."""
             "CBT technique suggestions",
             "Homework assignment generation",
             "Progress tracking"
-        ] 
+        ]
+    
+    async def process_chat_request(self, chat_request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Process chat request with AI therapist
+        """
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+        
+        from llm_service.llm_client import llm_client
+        
+        # Build conversation context
+        conversation_history = chat_request.get("conversation_history", [])
+        user_message = chat_request.get("message", "")
+        therapist_personality = chat_request.get("therapist_personality", {})
+        user_context = chat_request.get("user_context", "")
+        
+        # Create personalized prompt
+        prompt = f"""You are {therapist_personality.get('name', 'Dr. Sarah')}, a compassionate AI therapist specializing in Cognitive Behavioral Therapy.
+
+User Context: {user_context}
+
+Recent conversation:
+{self._format_conversation_history(conversation_history)}
+
+User's current message: {user_message}
+
+Please provide a therapeutic response that:
+1. Acknowledges the user's feelings with empathy
+2. Uses CBT techniques when appropriate
+3. Maintains a warm, professional tone
+4. Offers practical suggestions or insights
+5. Encourages further exploration
+6. Suggests specific action items when helpful
+
+Keep your response conversational and supportive, as if you're having a real therapy session."""
+
+        # Generate response using LLM
+        context = {
+            "therapy_type": "cbt",
+            "user_context": user_context,
+            "conversation_mode": "chat"
+        }
+        
+        response = await llm_client.generate_response(prompt, context=context)
+        
+        return {
+            "content": response,
+            "therapist_name": therapist_personality.get("name", "Dr. Sarah"),
+            "session_id": chat_request.get("session_id")
+        }
+    
+    def _format_conversation_history(self, history: List[Dict[str, Any]]) -> str:
+        """
+        Format conversation history for the prompt
+        """
+        if not history:
+            return "This is the beginning of our conversation."
+        
+        formatted_history = []
+        for message in history[-5:]:  # Last 5 messages for context
+            sender = "Therapist" if message.get("sender") == "therapist" else "User"
+            content = message.get("content", "")
+            formatted_history.append(f"{sender}: {content}")
+        
+        return "\n".join(formatted_history) 

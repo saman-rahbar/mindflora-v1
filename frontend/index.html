@@ -576,6 +576,15 @@
             <button class="nav-btn" onclick="showSection('analytics')">
                 <i class="fas fa-chart-line"></i> Analytics
             </button>
+            <button class="nav-btn" onclick="showSection('ai-chat')">
+                <i class="fas fa-comments"></i> AI Chat
+            </button>
+            <button class="nav-btn" onclick="showSection('assignments')">
+                <i class="fas fa-tasks"></i> Assignments
+            </button>
+            <button class="nav-btn" onclick="showSection('calendar')">
+                <i class="fas fa-calendar"></i> Calendar
+            </button>
         </div>
 
         <!-- Dashboard Section -->
@@ -654,13 +663,7 @@
                     </button>
                 </div>
                 
-                <!-- Traditional Therapy Option -->
-                <div style="background: rgba(0, 122, 255, 0.1); color: #1d1d1f; padding: 20px; border-radius: 16px; margin-bottom: 24px; border: 1px solid rgba(0, 122, 255, 0.2); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
-                    <h3 style="color: #007AFF; margin-bottom: 16px; font-weight: 600;"><i class="fas fa-robot"></i> Traditional Therapy</h3>
-                    <p style="margin-bottom: 8px; color: #86868b;"><strong>Choose your therapy type</strong> - select from specific modalities</p>
-                    <p style="margin-bottom: 8px; color: #86868b;"><strong>AI Agent:</strong> LLM-Powered Therapy Agent with real-time analysis</p>
-                    <p style="margin-bottom: 0; color: #86868b;"><strong>Privacy:</strong> All data processed with Local Differential Privacy protection</p>
-                </div>
+
                 
                 <!-- Smart Therapy Form (Hidden by default) -->
                 <form id="smart-therapy-form" style="display: none;">
@@ -677,30 +680,7 @@
                     </button>
                 </form>
                 
-                <!-- Traditional Therapy Form -->
-                <form id="therapy-form">
-                    <div class="form-group">
-                        <label for="therapy-type">Therapy Type</label>
-                        <select id="therapy-type" required>
-                            <option value="">Select therapy type...</option>
-                            <option value="cbt">Cognitive Behavioral Therapy (CBT)</option>
-                            <option value="logotherapy">Logotherapy</option>
-                            <option value="act">Acceptance & Commitment Therapy (ACT)</option>
-                            <option value="dbt">Dialectical Behavior Therapy (DBT)</option>
-                            <option value="somotherapy">Somotherapy</option>
-                            <option value="positive_psychology">Positive Psychology</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="session-content">What's on your mind today?</label>
-                        <textarea id="session-content" rows="6" placeholder="Share your thoughts, feelings, or concerns..." required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="mood-before">How are you feeling? (1-10)</label>
-                        <input type="number" id="mood-before" min="1" max="10" placeholder="Rate your mood">
-                    </div>
-                    <button type="submit" class="btn">Start Session</button>
-                </form>
+
             </div>
 
             <div class="card">
@@ -831,6 +811,42 @@
             </div>
         </div>
 
+        <!-- AI Chat Section -->
+        <div id="ai-chat" class="section">
+            <div class="main-content">
+                <div id="ai-chat-container">
+                    <div class="loading">
+                        <i class="fas fa-spinner"></i>
+                        <p>Loading AI therapist chat...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assignments Section -->
+        <div id="assignments" class="section">
+            <div class="main-content">
+                <div id="assignments-container">
+                    <div class="loading">
+                        <i class="fas fa-spinner"></i>
+                        <p>Loading assignments...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calendar Section -->
+        <div id="calendar" class="section">
+            <div class="main-content">
+                <div id="calendar-container">
+                    <div class="loading">
+                        <i class="fas fa-spinner"></i>
+                        <p>Loading calendar integration...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Messages -->
         <div id="messages"></div>
     </div>
@@ -873,6 +889,15 @@
                 case 'analytics':
                     loadAnalytics();
                     break;
+                case 'ai-chat':
+                    loadAIChat();
+                    break;
+                case 'assignments':
+                    loadAssignments();
+                    break;
+                case 'calendar':
+                    loadCalendar();
+                    break;
             }
         }
 
@@ -883,15 +908,21 @@
             }
 
             try {
-                const response = await apiCall('/analytics/mood', {
+                console.log('Tracking mood:', selectedMood);
+                const moodData = {
+                    mood_rating: selectedMood,
+                    timestamp: new Date().toISOString()
+                };
+                console.log('Mood data:', moodData);
+                
+                const response = await apiCall('/journaling/mood', {
                     method: 'POST',
-                    body: JSON.stringify({
-                        mood_rating: selectedMood,
-                        timestamp: new Date().toISOString()
-                    })
+                    body: JSON.stringify(moodData)
                 });
 
-                if (response.ok) {
+                console.log('Mood tracking response:', response);
+                
+                if (response && response.message === 'Mood tracked successfully') {
                     showMessage('Mood tracked successfully!', 'success');
                     selectedMood = null;
                     // Reset mood selection
@@ -899,10 +930,12 @@
                         option.classList.remove('selected');
                     });
                 } else {
-                    showMessage('Failed to track mood', 'error');
+                    console.error('Mood tracking failed - response:', response);
+                    showMessage('Failed to track mood: ' + (response?.message || 'Unknown error'), 'error');
                 }
             } catch (error) {
-                showMessage('Error tracking mood: ' + error.message, 'error');
+                console.error('Mood tracking error:', error);
+                showMessage('Error tracking mood: ' + (error.message || 'Unknown error'), 'error');
             }
         }
 
@@ -1233,6 +1266,10 @@
                                 <p><strong>${(homework.type || 'personalized_assignment').replace('_', ' ').toUpperCase()}</strong></p>
                                 <p>${homework.description || 'Complete your personalized homework assignment'}</p>
                                 <p><small>Duration: ${homework.duration || '1 week'}</small></p>
+                                <div style="margin-top: 10px; padding: 8px; background: #d4edda; border-radius: 6px; border: 1px solid #c3e6cb;">
+                                    <i class="fas fa-check-circle" style="color: #28a745;"></i>
+                                    <span style="color: #155724; font-size: 14px;">✓ Assignment added to Assignments tab</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1255,6 +1292,82 @@
             const therapySection = document.getElementById('therapy');
             const formCard = therapySection.querySelector('.card');
             formCard.insertAdjacentHTML('afterend', resultsHTML);
+            
+            // Create assignment in background without switching tabs
+            const homeworkDescription = homework.description || 'Complete your personalized homework assignment';
+            console.log('Creating assignment from therapy homework:', homeworkDescription);
+            
+            // Create assignment silently in background
+            startAssignmentFromTherapySilent(homeworkDescription);
+        }
+
+        // Silent assignment creation (doesn't switch tabs)
+        async function startAssignmentFromTherapySilent(homeworkDescription) {
+            console.log('Creating assignment silently with description:', homeworkDescription);
+            
+            // Validate input
+            if (!homeworkDescription || homeworkDescription.trim() === '') {
+                console.error('No homework description provided');
+                return;
+            }
+            
+            try {
+                // Create a new assignment from the therapy homework
+                const assignmentData = {
+                    title: "Therapy Homework",
+                    description: homeworkDescription,
+                    category: "homework",
+                    estimated_duration: 30,
+                    deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                    instructions: homeworkDescription,
+                    materials: ["Journal", "Quiet space"],
+                    progress_questions: [
+                        "How did you feel about this assignment?",
+                        "What insights did you gain?",
+                        "How can you apply this learning?"
+                    ]
+                };
+
+                console.log('Sending assignment data:', assignmentData);
+                const response = await apiCall('/therapy/assignments', {
+                    method: 'POST',
+                    body: JSON.stringify(assignmentData)
+                });
+
+                console.log('Assignment creation response:', response);
+                if (response && response.success) {
+                    // Store the assignment locally for immediate use
+                    const createdAssignment = response.data;
+                    localStorage.setItem('currentAssignment', JSON.stringify(createdAssignment));
+                    console.log('Assignment created successfully in background');
+                } else {
+                    // Try to create assignment locally if API fails
+                    console.log('API failed, creating assignment locally');
+                    const localAssignment = {
+                        id: Date.now().toString(),
+                        title: "Therapy Homework",
+                        description: homeworkDescription,
+                        category: "homework",
+                        status: "active",
+                        estimated_duration: 30,
+                        deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                        progress: 0,
+                        instructions: homeworkDescription,
+                        materials: ["Journal", "Quiet space"],
+                        progress_questions: [
+                            "How did you feel about this assignment?",
+                            "What insights did you gain?",
+                            "How can you apply this learning?"
+                        ],
+                        created_at: new Date().toISOString()
+                    };
+                    localStorage.setItem('currentAssignment', JSON.stringify(localAssignment));
+                    console.log('Assignment created locally in background');
+                }
+            } catch (error) {
+                console.error('Error creating assignment silently:', error);
+                // Don't show error to user since this is background process
+            }
         }
 
         // Traditional Therapy functions
@@ -1291,6 +1404,92 @@
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
         });
+
+        async function startAssignmentFromTherapy(homeworkDescription) {
+            console.log('Starting assignment from therapy with description:', homeworkDescription);
+            
+            // Validate input
+            if (!homeworkDescription || homeworkDescription.trim() === '') {
+                console.error('No homework description provided');
+                showMessage('Error: No assignment description provided', 'error');
+                return;
+            }
+            
+            try {
+                // Create a new assignment from the therapy homework
+                const assignmentData = {
+                    title: "Therapy Homework",
+                    description: homeworkDescription,
+                    category: "homework",
+                    estimated_duration: 30,
+                    deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                    instructions: homeworkDescription,
+                    materials: ["Journal", "Quiet space"],
+                    progress_questions: [
+                        "How did you feel about this assignment?",
+                        "What insights did you gain?",
+                        "How can you apply this learning?"
+                    ]
+                };
+
+                console.log('Sending assignment data:', assignmentData);
+                const response = await apiCall('/therapy/assignments', {
+                    method: 'POST',
+                    body: JSON.stringify(assignmentData)
+                });
+
+                console.log('Assignment creation response:', response);
+                if (response && response.success) {
+                    showMessage('Assignment created! Navigate to Assignments tab to start.', 'success');
+                    // Store the assignment locally for immediate use
+                    const createdAssignment = response.data;
+                    localStorage.setItem('currentAssignment', JSON.stringify(createdAssignment));
+                    // Switch to assignments tab and force refresh
+                    showSection('assignments');
+                    // Force reload assignments after a short delay
+                    setTimeout(() => {
+                        if (window.interactiveAssignments) {
+                            window.interactiveAssignments.refreshAssignments();
+                        }
+                    }, 500);
+                } else {
+                    // Try to create assignment locally if API fails
+                    console.log('API failed, creating assignment locally');
+                    const localAssignment = {
+                        id: Date.now().toString(),
+                        title: "Therapy Homework",
+                        description: homeworkDescription,
+                        category: "homework",
+                        status: "active",
+                        estimated_duration: 30,
+                        deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                        progress: 0,
+                        instructions: homeworkDescription,
+                        materials: ["Journal", "Quiet space"],
+                        progress_questions: [
+                            "How did you feel about this assignment?",
+                            "What insights did you gain?",
+                            "How can you apply this learning?"
+                        ],
+                        created_at: new Date().toISOString()
+                    };
+                    localStorage.setItem('currentAssignment', JSON.stringify(localAssignment));
+                    showMessage('Assignment created! Navigate to Assignments tab to start.', 'success');
+                    // Switch to assignments tab and force refresh
+                    showSection('assignments');
+                    // Force reload assignments after a short delay
+                    setTimeout(() => {
+                        if (window.interactiveAssignments) {
+                            window.interactiveAssignments.refreshAssignments();
+                        }
+                    }, 500);
+                }
+            } catch (error) {
+                console.error('Full error object:', error);
+                console.error('Error stack:', error.stack);
+                showMessage('Error creating assignment: ' + (error.message || 'Unknown error'), 'error');
+            }
+        }
 
         function displayTherapyResults(response) {
             const aiResponse = response.ai_response;
@@ -1460,6 +1659,73 @@
             const analytics = await apiCall('/analytics/overview?days=30');
             if (analytics) {
                 displayAnalytics(analytics);
+            }
+        }
+
+        // AI Chat functions
+        async function loadAIChat() {
+            try {
+                // Initialize AI therapist chat component
+                if (typeof AITherapistChat !== 'undefined') {
+                    // Create new instance if it doesn't exist
+                    if (!window.aiTherapistChat) {
+                        window.aiTherapistChat = new AITherapistChat();
+                    }
+                    await window.aiTherapistChat.init('ai-chat-container');
+                } else {
+                    console.error('AI therapist chat component not loaded');
+                    document.getElementById('ai-chat-container').innerHTML = '<p>AI Chat component not available</p>';
+                }
+            } catch (error) {
+                console.error('Error loading AI chat:', error);
+                document.getElementById('ai-chat-container').innerHTML = '<p>Error loading AI chat: ' + error.message + '</p>';
+            }
+        }
+
+        // Assignments functions
+        async function loadAssignments() {
+            try {
+                console.log('Loading assignments...');
+                console.log('InteractiveAssignments available:', typeof InteractiveAssignments !== 'undefined');
+                
+                // Initialize interactive assignments component
+                if (typeof InteractiveAssignments !== 'undefined') {
+                    // Create new instance if it doesn't exist
+                    if (!window.interactiveAssignments) {
+                        console.log('Creating new InteractiveAssignments instance');
+                        window.interactiveAssignments = new InteractiveAssignments();
+                    }
+                    console.log('Initializing assignments component...');
+                    await window.interactiveAssignments.init('assignments-container');
+                    console.log('Assignments component initialized successfully');
+                } else {
+                    console.error('Interactive assignments component not loaded');
+                    document.getElementById('assignments-container').innerHTML = '<p>Assignments component not available</p>';
+                }
+            } catch (error) {
+                console.error('Error loading assignments:', error);
+                console.error('Error stack:', error.stack);
+                document.getElementById('assignments-container').innerHTML = '<p>Error loading assignments: ' + error.message + '</p>';
+            }
+        }
+
+        // Calendar functions
+        async function loadCalendar() {
+            try {
+                // Initialize calendar integration component
+                if (typeof CalendarIntegration !== 'undefined') {
+                    // Create new instance if it doesn't exist
+                    if (!window.calendarIntegration) {
+                        window.calendarIntegration = new CalendarIntegration();
+                    }
+                    await window.calendarIntegration.init('calendar-container');
+                } else {
+                    console.error('Calendar integration component not loaded');
+                    document.getElementById('calendar-container').innerHTML = '<p>Calendar component not available</p>';
+                }
+            } catch (error) {
+                console.error('Error loading calendar:', error);
+                document.getElementById('calendar-container').innerHTML = '<p>Error loading calendar: ' + error.message + '</p>';
             }
         }
 
@@ -1864,5 +2130,33 @@
             }
         }
     </script>
+    
+    <!-- New Component Scripts -->
+    <script src="components/progress-dashboard.js"></script>
+    <script src="components/mood-tracker.js"></script>
+    <script src="components/achievement-gallery.js"></script>
+    <script src="components/ai-therapist-chat.js"></script>
+    <script src="components/interactive-assignments.js"></script>
+    <script src="components/calendar-integration.js"></script>
+    
+    <!-- Chart.js for charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    
+    <!-- Component Styles -->
+    <link rel="stylesheet" href="styles/components.css">
+
+    <!-- Assignment Modal -->
+    <div id="assignment-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Assignment Details</h3>
+                <span class="close" onclick="interactiveAssignments.hideAssignmentModal()">&times;</span>
+            </div>
+            <div id="modal-content">
+                <!-- Assignment content will be loaded here -->
+            </div>
+        </div>
+    </div>
 </body>
 </html> 

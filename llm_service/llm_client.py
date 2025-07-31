@@ -7,6 +7,7 @@ import openai
 from openai import AsyncOpenAI
 import anthropic
 from anthropic import AsyncAnthropic
+import httpx
 
 class LLMClient(ABC):
     """Abstract base class for LLM clients"""
@@ -285,11 +286,57 @@ class MockLLMClient(LLMClient):
         }
     
     async def generate_response(self, prompt: str, context: Dict[str, Any] = None) -> str:
-        """Generate a mock therapeutic response"""
+        """Generate a mock therapeutic response based on user input"""
         import random
+        
         therapy_type = context.get("therapy_type", "cbt") if context else "cbt"
-        responses = self.responses.get(therapy_type, self.responses["cbt"])
-        return random.choice(responses)
+        user_message = prompt.lower()
+        
+        # Contextual responses based on user input
+        if "anxiety" in user_message or "worried" in user_message or "nervous" in user_message:
+            if therapy_type == "cbt":
+                return "I can sense the anxiety in your words. Let's work together to identify the specific thoughts that are fueling this anxiety. Can you tell me more about what's making you feel this way? Try this exercise: Write down three thoughts that are causing your anxiety, then ask yourself: 'What evidence supports this thought? What evidence contradicts it?'"
+            elif therapy_type == "act":
+                return "Anxiety is a natural response, and I hear how challenging it feels. Let's practice accepting these anxious feelings while focusing on what matters most to you. Here's what you can do: Take 5 deep breaths, acknowledging the anxiety without trying to push it away. Notice how it feels in your body."
+            else:
+                return "I understand how overwhelming anxiety can feel. You're not alone in this experience. Let's explore what's behind these feelings together."
+        
+        elif "sad" in user_message or "depressed" in user_message or "down" in user_message:
+            if therapy_type == "cbt":
+                return "I hear the sadness in your voice. Let's examine the thoughts and beliefs that might be contributing to these feelings. What's been on your mind lately?"
+            elif therapy_type == "positive_psychology":
+                return "I acknowledge the difficulty you're experiencing. Even in dark times, we can find small moments of light. Let's focus on your strengths and what brings you joy."
+            else:
+                return "Your feelings are valid, and I'm here to listen. Depression can feel isolating, but you don't have to face this alone. What would be most supportive for you right now?"
+        
+        elif "stress" in user_message or "overwhelmed" in user_message or "pressure" in user_message:
+            if therapy_type == "cbt":
+                return "Stress can feel like it's taking over. Let's break this down together - what specific situations are causing you the most stress right now? Try this exercise: Make a list of your stressors and rate each one from 1-10. Then identify which ones you can control and which ones you can't."
+            elif therapy_type == "dbt":
+                return "I can see how overwhelmed you're feeling. Let's practice some distress tolerance skills together. Here's what you can do: Use the 'STOP' technique - Stop, Take a step back, Observe your thoughts and feelings, Proceed mindfully."
+            else:
+                return "Stress can be incredibly challenging. You're showing real strength by reaching out. Let's work on finding some relief together."
+        
+        elif "relationship" in user_message or "partner" in user_message or "family" in user_message:
+            if therapy_type == "cbt":
+                return "Relationships can be complex and challenging. Let's explore the thoughts and patterns that might be affecting your connections with others."
+            elif therapy_type == "dbt":
+                return "Interpersonal relationships can be both rewarding and difficult. Let's work on some skills to help you communicate more effectively and set healthy boundaries."
+            else:
+                return "Relationships are fundamental to our well-being. I'm here to help you navigate these important connections in your life."
+        
+        elif "goal" in user_message or "future" in user_message or "purpose" in user_message:
+            if therapy_type == "logotherapy":
+                return "I sense you're searching for deeper meaning and purpose. Let's explore what truly matters to you and how you can align your actions with your values."
+            elif therapy_type == "positive_psychology":
+                return "Your desire to grow and achieve is inspiring. Let's focus on your strengths and how you can use them to move toward your goals."
+            else:
+                return "Having goals and dreams is wonderful. Let's work together to break them down into manageable steps and overcome any obstacles."
+        
+        else:
+            # Generic responses based on therapy type
+            responses = self.responses.get(therapy_type, self.responses["cbt"])
+            return random.choice(responses)
     
     async def analyze_content(self, content: str, analysis_type: str) -> Dict[str, Any]:
         """Generate mock analysis"""
@@ -306,27 +353,115 @@ class MockLLMClient(LLMClient):
             }
         }
 
+class OllamaLLMClient(LLMClient):
+    """Client for interacting with Ollama API"""
+    def __init__(self, model: str = "llama2:7b", host: str = "http://localhost:11434", **kwargs):
+        super().__init__()
+        self.model = model
+        self.host = host
+        self.client = httpx.AsyncClient(timeout=120.0)  # Increased timeout to 2 minutes
+        
+    async def generate_response(self, prompt: str, context: Optional[Dict[str, Any]] = None) -> str:
+        """Generate a response using Ollama API"""
+        try:
+            # Format the prompt with therapy context
+            therapy_type = context.get('therapy_type', 'cbt') if context else 'cbt'
+            user_context = context.get('user_context', {}) if context else {}
+            
+            system_prompt = f"""You are a professional therapist specializing in {therapy_type.upper()}. 
+            Your responses should be empathetic, supportive, and aligned with {therapy_type.upper()} principles.
+            When suggesting exercises or practices, be explicit by starting with 'Exercise:' or 'Practice:'.
+            Keep responses focused and concise."""
+            
+            # Add user context if available
+            if user_context:
+                system_prompt += f"\nUser Context: {json.dumps(user_context)}"
+            
+            # Make API call to Ollama
+            response = await self.client.post(
+                f"{self.host}/api/generate",
+                json={
+                    "model": self.model,
+                    "prompt": prompt,
+                    "system": system_prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.7,
+                        "top_p": 0.9
+                    }
+                }
+            )
+            response.raise_for_status()
+            result = response.json()
+            return result['response']
+            
+        except Exception as e:
+            print(f"❌ Error generating response from Ollama: {e}")
+            return "I apologize, but I'm having trouble processing your request right now. Let's try again in a moment."
+
+    async def analyze_content(self, content: str, analysis_type: str = "therapy") -> Dict[str, Any]:
+        """Analyze content for therapeutic insights"""
+        try:
+            # Make API call to Ollama for content analysis
+            response = await self.client.post(
+                f"{self.host}/api/generate",
+                json={
+                    "model": self.model,
+                    "prompt": f"""Analyze this therapy session content and extract key information:
+                    {content}
+                    
+                    Format your response as JSON with these fields:
+                    - themes: List of main therapeutic themes discussed
+                    - mood: Overall mood assessment
+                    - suggested_topics: List of relevant topics to explore
+                    - action_items: List of specific therapeutic exercises or practices mentioned
+                    """,
+                    "system": "You are an expert therapy session analyzer. Provide structured analysis in valid JSON format.",
+                    "stream": False
+                }
+            )
+            response.raise_for_status()
+            result = response.json()
+            
+            # Parse the response as JSON
+            try:
+                analysis = json.loads(result['response'])
+                return {
+                    "themes": analysis.get("themes", []),
+                    "mood": analysis.get("mood"),
+                    "suggested_topics": analysis.get("suggested_topics", []),
+                    "action_items": analysis.get("action_items", [])
+                }
+            except json.JSONDecodeError:
+                # Fallback if response isn't valid JSON
+                return {
+                    "themes": [],
+                    "mood": None,
+                    "suggested_topics": [],
+                    "action_items": []
+                }
+                
+        except Exception as e:
+            print(f"❌ Error analyzing content with Ollama: {e}")
+            return {
+                "themes": [],
+                "mood": None,
+                "suggested_topics": [],
+                "action_items": []
+            }
+
 # Factory function to create LLM client
-def create_llm_client(client_type: str = "mock", **kwargs) -> LLMClient:
-    """Create an LLM client based on configuration"""
+def create_llm_client(client_type: str = "ollama", **kwargs) -> LLMClient:
+    """Factory function to create LLM clients"""
     if client_type == "openai":
         return OpenAILLMClient(**kwargs)
     elif client_type == "anthropic":
         return AnthropicLLMClient(**kwargs)
+    elif client_type == "ollama":
+        return OllamaLLMClient(**kwargs)
+    elif client_type == "mock":
+        return MockLLMClient(**kwargs)
     else:
-        return MockLLMClient()
+        raise ValueError(f"Unknown LLM client type: {client_type}")
 
-# Global LLM client instance
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
-try:
-    from config import Config
-    # Create LLM client based on configuration
-    llm_config = Config.get_llm_config()
-    llm_client = create_llm_client(**llm_config)
-except ImportError:
-    # Fallback to mock client if config import fails
-    print("Warning: Could not import config, using mock LLM client")
-    llm_client = create_llm_client("mock") 
+# Note: LLM client is initialized in the router files 
