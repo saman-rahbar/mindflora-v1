@@ -55,10 +55,10 @@ class AITherapistChat {
                         </div>
                     </div>
                     <div class="chat-controls">
-                        <button class="btn-icon" onclick="aiTherapistChat.exportSession()">
+                        <button class="btn-icon" id="export-session-btn">
                             <i class="fas fa-download"></i>
                         </button>
-                        <button class="btn-icon" onclick="aiTherapistChat.startNewSession()">
+                        <button class="btn-icon" id="new-session-btn">
                             <i class="fas fa-plus"></i>
                         </button>
                     </div>
@@ -82,16 +82,16 @@ class AITherapistChat {
                             </button>
                         </div>
                         <div class="quick-actions">
-                            <button class="quick-action-btn" onclick="aiTherapistChat.sendQuickMessage('I\'m feeling anxious today')">
+                            <button class="quick-action-btn" data-message="I'm feeling anxious today">
                                 😰 Feeling Anxious
                             </button>
-                            <button class="quick-action-btn" onclick="aiTherapistChat.sendQuickMessage('I need help with stress management')">
+                            <button class="quick-action-btn" data-message="I need help with stress management">
                                 😤 Stress Management
                             </button>
-                            <button class="quick-action-btn" onclick="aiTherapistChat.sendQuickMessage('I want to work on my goals')">
+                            <button class="quick-action-btn" data-message="I want to work on my goals">
                                 🎯 Goal Setting
                             </button>
-                            <button class="quick-action-btn" onclick="aiTherapistChat.sendQuickMessage('I need someone to talk to')">
+                            <button class="quick-action-btn" data-message="I need someone to talk to">
                                 💬 Just Talk
                             </button>
                         </div>
@@ -108,87 +108,31 @@ class AITherapistChat {
                         ${this.renderActionItems()}
                     </div>
                 </div>
-
-                <!-- Session Summary Modal -->
-                <div id="session-modal" class="modal">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h3>Session Summary</h3>
-                            <button class="modal-close">&times;</button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="session-summary">
-                                <div class="summary-section">
-                                    <h4>Session Overview</h4>
-                                    <p>Duration: ${this.getSessionDuration()}</p>
-                                    <p>Messages: ${this.currentSession.messages.length}</p>
-                                    <p>Action Items: ${this.actionItems.length}</p>
-                                </div>
-                                <div class="summary-section">
-                                    <h4>Key Topics Discussed</h4>
-                                    <div class="topics-list">
-                                        ${this.currentSession.topics.map(topic => `
-                                            <span class="topic-tag">${topic}</span>
-                                        `).join('')}
-                                    </div>
-                                </div>
-                                <div class="summary-section">
-                                    <h4>Next Steps</h4>
-                                    <div class="next-steps">
-                                        ${this.actionItems.map(item => `
-                                            <div class="step-item">
-                                                <i class="fas fa-check-circle"></i>
-                                                <span>${item.description}</span>
-                                                ${item.deadline ? `<span class="deadline">Due: ${item.deadline}</span>` : ''}
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         `;
-
-        this.scrollToBottom();
     }
 
     renderWelcomeMessage() {
         return `
-            <div class="message therapist-message">
+            <div class="message therapist">
                 <div class="message-avatar">
                     <i class="fas fa-user-md"></i>
                 </div>
                 <div class="message-content">
-                    <div class="message-header">
-                        <span class="sender-name">${this.therapistPersonality.name}</span>
-                        <span class="message-time">${new Date().toLocaleTimeString()}</span>
-                    </div>
-                    <div class="message-text">
-                        <p>Hello! I'm ${this.therapistPersonality.name}, your AI therapist. I'm here to support you on your mental health journey.</p>
-                        <p>How are you feeling today? You can share anything that's on your mind, and I'll help you work through it together.</p>
-                        <p>Remember, this is a safe space for you to express yourself openly.</p>
-                    </div>
+                    Hello! I'm ${this.therapistPersonality.name}, your AI therapist. I'm here to listen, support, and help you work through whatever you're experiencing. How can I help you today?
                 </div>
             </div>
         `;
     }
 
     renderMessages() {
-        return this.currentSession.messages.map(message => `
-            <div class="message ${message.sender}-message">
+        return this.messages.map(message => `
+            <div class="message ${message.sender}">
                 <div class="message-avatar">
-                    <i class="fas fa-${message.sender === 'therapist' ? 'user-md' : 'user'}"></i>
+                    <i class="fas fa-${message.sender === 'user' ? 'user' : 'user-md'}"></i>
                 </div>
                 <div class="message-content">
-                    <div class="message-header">
-                        <span class="sender-name">${message.sender === 'therapist' ? this.therapistPersonality.name : 'You'}</span>
-                        <span class="message-time">${new Date(message.timestamp).toLocaleTimeString()}</span>
-                    </div>
-                    <div class="message-text">
-                        ${message.content}
-                    </div>
+                    ${message.content}
                     ${message.actionItems ? this.renderMessageActionItems(message.actionItems) : ''}
                 </div>
             </div>
@@ -199,58 +143,35 @@ class AITherapistChat {
         if (!actionItems || actionItems.length === 0) return '';
         
         return `
-            <div class="action-items-extracted">
-                <h5><i class="fas fa-lightbulb"></i> Suggested Actions:</h5>
-                <div class="action-items-grid">
-                    ${actionItems.map(item => `
-                        <div class="action-item-card" onclick="aiTherapistChat.addActionItem('${item.description}', '${item.deadline || ''}')">
-                            <div class="action-icon">
-                                <i class="fas fa-${item.icon || 'task'}"></i>
-                            </div>
-                            <div class="action-content">
-                                <h6>${item.title}</h6>
-                                <p>${item.description}</p>
-                                ${item.deadline ? `<span class="deadline">Due: ${item.deadline}</span>` : ''}
-                            </div>
-                            <button class="add-action-btn">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                        </div>
-                    `).join('')}
-                </div>
+            <div class="action-items" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.1);">
+                <h5 style="margin: 0 0 8px 0; font-size: 12px; color: #007AFF;">Action Items:</h5>
+                ${actionItems.map(item => `
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 12px;">
+                        <i class="fas fa-lightbulb" style="color: #FFD93D;"></i>
+                        <span>${item.title || item.description}</span>
+                    </div>
+                `).join('')}
             </div>
         `;
     }
 
     renderActionItems() {
         if (this.actionItems.length === 0) {
-            return `
-                <div class="empty-action-items">
-                    <i class="fas fa-clipboard-list"></i>
-                    <p>No action items yet. Start a conversation to get personalized recommendations!</p>
-                </div>
-            `;
+            return '<p style="text-align: center; color: #86868b; font-style: italic;">No action items yet. Start a conversation to generate some!</p>';
         }
 
         return this.actionItems.map((item, index) => `
-            <div class="action-item ${item.completed ? 'completed' : ''}" data-index="${index}">
-                <div class="action-checkbox">
-                    <input type="checkbox" 
-                           id="action-${index}" 
-                           ${item.completed ? 'checked' : ''}
-                           onchange="aiTherapistChat.toggleActionItem(${index})">
-                    <label for="action-${index}"></label>
+            <div class="action-item ${item.completed ? 'completed' : ''}">
+                <div class="action-item-checkbox" onclick="window.aiTherapistChat.toggleActionItem(${index})"></div>
+                <div class="action-item-content">
+                    <div class="action-item-title">${item.title}</div>
+                    <div class="action-item-description">${item.description}</div>
                 </div>
-                <div class="action-content">
-                    <h6>${item.title}</h6>
-                    <p>${item.description}</p>
-                    ${item.deadline ? `<span class="deadline">Due: ${item.deadline}</span>` : ''}
-                </div>
-                <div class="action-actions">
-                    <button class="btn-icon" onclick="aiTherapistChat.editActionItem(${index})">
+                <div class="action-item-actions">
+                    <button class="btn-edit" onclick="window.aiTherapistChat.editActionItem(${index})">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn-icon" onclick="aiTherapistChat.deleteActionItem(${index})">
+                    <button class="btn-delete" onclick="window.aiTherapistChat.deleteActionItem(${index})">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -278,6 +199,31 @@ class AITherapistChat {
         if (sendBtn) {
             sendBtn.addEventListener('click', () => {
                 this.sendMessage();
+            });
+        }
+
+        // Add event listeners for quick action buttons
+        const quickActionBtns = document.querySelectorAll('.quick-action-btn');
+        quickActionBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const message = btn.getAttribute('data-message');
+                this.sendQuickMessage(message);
+            });
+        });
+
+        // Add event listeners for control buttons
+        const exportBtn = document.getElementById('export-session-btn');
+        const newSessionBtn = document.getElementById('new-session-btn');
+
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => {
+                this.exportSession();
+            });
+        }
+
+        if (newSessionBtn) {
+            newSessionBtn.addEventListener('click', () => {
+                this.startNewSession();
             });
         }
     }
@@ -494,20 +440,15 @@ class AITherapistChat {
     }
 
     showTypingIndicator() {
-        this.isTyping = true;
         const messagesContainer = document.getElementById('chat-messages');
         const typingDiv = document.createElement('div');
-        typingDiv.className = 'message therapist-message typing-indicator';
+        typingDiv.className = 'message therapist typing';
         typingDiv.id = 'typing-indicator';
         typingDiv.innerHTML = `
             <div class="message-avatar">
                 <i class="fas fa-user-md"></i>
             </div>
             <div class="message-content">
-                <div class="message-header">
-                    <span class="sender-name">${this.therapistPersonality.name}</span>
-                    <span class="message-time">${new Date().toLocaleTimeString()}</span>
-                </div>
                 <div class="typing-dots">
                     <span></span>
                     <span></span>
@@ -520,7 +461,6 @@ class AITherapistChat {
     }
 
     hideTypingIndicator() {
-        this.isTyping = false;
         const typingIndicator = document.getElementById('typing-indicator');
         if (typingIndicator) {
             typingIndicator.remove();
@@ -529,41 +469,37 @@ class AITherapistChat {
 
     scrollToBottom() {
         const messagesContainer = document.getElementById('chat-messages');
-        if (messagesContainer) {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
     getSessionDuration() {
-        const duration = new Date() - this.currentSession.startTime;
-        const minutes = Math.floor(duration / 60000);
-        return `${minutes} minutes`;
+        return Math.round((new Date() - this.currentSession.startTime) / 1000);
     }
 
     exportSession() {
         const sessionData = {
             session: this.currentSession,
+            messages: this.messages,
             actionItems: this.actionItems,
-            exportDate: new Date()
+            duration: this.getSessionDuration()
         };
 
-        const blob = new Blob([JSON.stringify(sessionData, null, 2)], { type: 'application/json' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `therapy-session-${this.currentSession.id}.json`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+        const dataStr = JSON.stringify(sessionData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `therapy-session-${this.currentSession.id}.json`;
+        link.click();
+        
+        URL.revokeObjectURL(url);
     }
 
     startNewSession() {
-        // Save current session if it has content
-        if (this.currentSession && this.currentSession.messages.length > 0) {
-            this.saveSession();
-        }
-
-        this.startNewSession();
+        this.messages = [];
         this.actionItems = [];
+        this.startNewSession();
         this.render();
     }
 
@@ -571,7 +507,11 @@ class AITherapistChat {
         try {
             await apiCall('therapy/sessions', {
                 method: 'POST',
-                body: JSON.stringify(this.currentSession)
+                body: JSON.stringify({
+                    session: this.currentSession,
+                    messages: this.messages,
+                    actionItems: this.actionItems
+                })
             });
         } catch (error) {
             console.error('Error saving session:', error);

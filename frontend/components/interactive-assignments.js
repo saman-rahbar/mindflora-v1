@@ -209,11 +209,11 @@ class InteractiveAssignments {
                     ` : ''}
                 </div>
                 <div class="assignment-actions">
-                    <button class="btn-icon" onclick="interactiveAssignments.startAssignment('${assignment.id}')">
-                        <i class="fas fa-play"></i>
+                    <button class="btn-start" data-assignment-id="${assignment.id}">
+                        <i class="fas fa-play"></i> Start
                     </button>
-                    <button class="btn-icon" onclick="interactiveAssignments.editAssignment('${assignment.id}')">
-                        <i class="fas fa-edit"></i>
+                    <button class="btn-view" data-assignment-id="${assignment.id}">
+                        <i class="fas fa-eye"></i> View
                     </button>
                 </div>
             </div>
@@ -270,6 +270,28 @@ class InteractiveAssignments {
                 // Update active button
                 categoryButtons.forEach(btn => btn.classList.remove('active'));
                 button.classList.add('active');
+            });
+        });
+
+        // Assignment action buttons
+        const startButtons = document.querySelectorAll('.btn-start');
+        startButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                const assignmentId = button.getAttribute('data-assignment-id');
+                this.startAssignment(assignmentId);
+            });
+        });
+
+        const viewButtons = document.querySelectorAll('.btn-view');
+        viewButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                const assignmentId = button.getAttribute('data-assignment-id');
+                const assignment = this.assignments.find(a => a.id === assignmentId);
+                if (assignment) {
+                    this.showAssignmentModal(assignment);
+                }
             });
         });
 
