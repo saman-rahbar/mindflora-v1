@@ -39,6 +39,7 @@ class InteractiveAssignments {
         console.log('refreshAssignments: Force refreshing assignments');
         await this.loadAssignments();
         this.render();
+        this.setupEventListeners(); // Re-attach event listeners after render
         console.log('refreshAssignments: Refresh complete');
     }
 
@@ -957,9 +958,10 @@ class InteractiveAssignments {
         // Show completion message
         this.showCompletionMessage(assignment);
 
-        // Return to assignments view
+        // Return to assignments view and re-attach event listeners
         setTimeout(() => {
             this.render();
+            this.setupEventListeners(); // Re-attach event listeners after render
         }, 3000);
     }
 
@@ -992,6 +994,7 @@ class InteractiveAssignments {
         if (backBtn) {
             backBtn.addEventListener('click', () => {
                 this.render();
+                this.setupEventListeners(); // Re-attach event listeners after render
             });
         }
     }
