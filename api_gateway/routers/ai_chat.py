@@ -57,7 +57,7 @@ active_sessions = {}
 async def send_chat_message(
     chat_message: ChatMessage,
     user_service: UserService = Depends(get_db)
-):
+) -> ChatResponse:
     """Send a message to the AI therapist and get a response"""
     try:
         # Create or get session
@@ -129,7 +129,10 @@ async def send_chat_message(
             suggested_topics=generate_suggested_topics(ai_response)
         )
         
+    except ValidationError as e:
+        raise HTTPException(status_code=422, detail=f"Invalid request data: {str(e)}")
     except Exception as e:
+        print(f"❌ Error processing chat message: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing chat message: {str(e)}")
 
 @router.get("/session/{session_id}")

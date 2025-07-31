@@ -27,13 +27,18 @@ class AITherapistChat {
     }
 
     startNewSession() {
+        // Get selected therapy type or default to CBT
+        const therapySelector = document.getElementById('therapy-type-selector');
+        const therapyType = therapySelector ? therapySelector.value : 'cbt';
+
         this.currentSession = {
-            id: Date.now(),
+            id: `session_${Date.now()}`,
             startTime: new Date(),
             messages: [],
             actionItems: [],
             mood: null,
-            topics: []
+            topics: [],
+            therapyType: therapyType
         };
     }
 
@@ -352,10 +357,11 @@ class AITherapistChat {
         // Get user info from localStorage or API
         const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
         return {
-            name: userInfo.first_name || 'User',
+            first_name: userInfo.first_name || 'User',
+            last_name: userInfo.last_name || '',
             age: userInfo.age || null,
             education_level: userInfo.education_level || null,
-            therapy_preference: userInfo.therapy_preference || 'cbt'
+            therapy_preference: userInfo.therapy_preference || this.currentSession?.therapyType || 'cbt'
         };
     }
 
