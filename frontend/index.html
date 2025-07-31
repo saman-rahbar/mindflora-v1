@@ -908,14 +908,20 @@
             }
 
             try {
+                console.log('Tracking mood:', selectedMood);
+                const moodData = {
+                    mood_rating: selectedMood,
+                    timestamp: new Date().toISOString()
+                };
+                console.log('Mood data:', moodData);
+                
                 const response = await apiCall('/analytics/mood', {
                     method: 'POST',
-                    body: JSON.stringify({
-                        mood_rating: selectedMood,
-                        timestamp: new Date().toISOString()
-                    })
+                    body: JSON.stringify(moodData)
                 });
 
+                console.log('Mood tracking response:', response);
+                
                 if (response && response.success) {
                     showMessage('Mood tracked successfully!', 'success');
                     selectedMood = null;
@@ -924,7 +930,8 @@
                         option.classList.remove('selected');
                     });
                 } else {
-                    showMessage('Failed to track mood', 'error');
+                    console.error('Mood tracking failed - response:', response);
+                    showMessage('Failed to track mood: ' + (response?.message || 'Unknown error'), 'error');
                 }
             } catch (error) {
                 console.error('Mood tracking error:', error);
@@ -1286,10 +1293,81 @@
             const formCard = therapySection.querySelector('.card');
             formCard.insertAdjacentHTML('afterend', resultsHTML);
             
-            // Automatically create assignment from therapy homework
+            // Create assignment in background without switching tabs
             const homeworkDescription = homework.description || 'Complete your personalized homework assignment';
-            console.log('Automatically creating assignment from therapy homework:', homeworkDescription);
-            startAssignmentFromTherapy(homeworkDescription);
+            console.log('Creating assignment from therapy homework:', homeworkDescription);
+            
+            // Create assignment silently in background
+            startAssignmentFromTherapySilent(homeworkDescription);
+        }
+
+        // Silent assignment creation (doesn't switch tabs)
+        async function startAssignmentFromTherapySilent(homeworkDescription) {
+            console.log('Creating assignment silently with description:', homeworkDescription);
+            
+            // Validate input
+            if (!homeworkDescription || homeworkDescription.trim() === '') {
+                console.error('No homework description provided');
+                return;
+            }
+            
+            try {
+                // Create a new assignment from the therapy homework
+                const assignmentData = {
+                    title: "Therapy Homework",
+                    description: homeworkDescription,
+                    category: "homework",
+                    estimated_duration: 30,
+                    deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                    instructions: homeworkDescription,
+                    materials: ["Journal", "Quiet space"],
+                    progress_questions: [
+                        "How did you feel about this assignment?",
+                        "What insights did you gain?",
+                        "How can you apply this learning?"
+                    ]
+                };
+
+                console.log('Sending assignment data:', assignmentData);
+                const response = await apiCall('/therapy/assignments', {
+                    method: 'POST',
+                    body: JSON.stringify(assignmentData)
+                });
+
+                console.log('Assignment creation response:', response);
+                if (response && response.success) {
+                    // Store the assignment locally for immediate use
+                    const createdAssignment = response.data;
+                    localStorage.setItem('currentAssignment', JSON.stringify(createdAssignment));
+                    console.log('Assignment created successfully in background');
+                } else {
+                    // Try to create assignment locally if API fails
+                    console.log('API failed, creating assignment locally');
+                    const localAssignment = {
+                        id: Date.now().toString(),
+                        title: "Therapy Homework",
+                        description: homeworkDescription,
+                        category: "homework",
+                        status: "active",
+                        estimated_duration: 30,
+                        deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                        progress: 0,
+                        instructions: homeworkDescription,
+                        materials: ["Journal", "Quiet space"],
+                        progress_questions: [
+                            "How did you feel about this assignment?",
+                            "What insights did you gain?",
+                            "How can you apply this learning?"
+                        ],
+                        created_at: new Date().toISOString()
+                    };
+                    localStorage.setItem('currentAssignment', JSON.stringify(localAssignment));
+                    console.log('Assignment created locally in background');
+                }
+            } catch (error) {
+                console.error('Error creating assignment silently:', error);
+                // Don't show error to user since this is background process
+            }
         }
 
         // Traditional Therapy functions
