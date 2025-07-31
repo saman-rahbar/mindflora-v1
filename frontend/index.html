@@ -1368,12 +1368,34 @@
                 console.log('Assignment creation response:', response);
                 if (response && response.success) {
                     showMessage('Assignment created! Navigate to Assignments tab to start.', 'success');
+                    // Store the assignment locally for immediate use
+                    const createdAssignment = response.data;
+                    localStorage.setItem('currentAssignment', JSON.stringify(createdAssignment));
                     // Switch to assignments tab
                     showSection('assignments');
                 } else {
                     // Try to create assignment locally if API fails
                     console.log('API failed, creating assignment locally');
-                    showMessage('Assignment created locally! Navigate to Assignments tab to start.', 'success');
+                    const localAssignment = {
+                        id: Date.now().toString(),
+                        title: "Therapy Homework",
+                        description: homeworkDescription,
+                        category: "homework",
+                        status: "active",
+                        estimated_duration: 30,
+                        deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                        progress: 0,
+                        instructions: homeworkDescription,
+                        materials: ["Journal", "Quiet space"],
+                        progress_questions: [
+                            "How did you feel about this assignment?",
+                            "What insights did you gain?",
+                            "How can you apply this learning?"
+                        ],
+                        created_at: new Date().toISOString()
+                    };
+                    localStorage.setItem('currentAssignment', JSON.stringify(localAssignment));
+                    showMessage('Assignment created! Navigate to Assignments tab to start.', 'success');
                     // Switch to assignments tab
                     showSection('assignments');
                 }

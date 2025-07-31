@@ -28,49 +28,48 @@ class InteractiveAssignments {
 
     async loadAssignments() {
         try {
+            // Check for current assignment from therapy session
+            const currentAssignment = localStorage.getItem('currentAssignment');
+            let assignments = [];
+            
+            if (currentAssignment) {
+                const parsedAssignment = JSON.parse(currentAssignment);
+                assignments.push(parsedAssignment);
+            }
+            
             const response = await apiCall('therapy/assignments');
             if (response && response.data) {
-                this.assignments = response.data;
+                // Merge with API assignments, avoiding duplicates
+                const apiAssignments = response.data.filter(apiAssignment => 
+                    !assignments.some(existing => existing.id === apiAssignment.id)
+                );
+                this.assignments = [...assignments, ...apiAssignments];
             } else {
-                // Fallback to mock data if API fails
-                this.assignments = [
-                    {
-                        id: "1",
-                        title: "Daily Mood Check-in",
-                        description: "Take 5 minutes to reflect on your mood and write down 3 things you're grateful for.",
-                        category: "homework",
-                        status: "active",
-                        estimated_duration: 15,
-                        deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-                        progress: 0,
-                        instructions: "Find a quiet place, take deep breaths, and reflect on your day.",
-                        materials: ["Journal", "Quiet space"],
-                        progress_questions: [
-                            "How are you feeling about this assignment?",
-                            "What challenges did you encounter?",
-                            "What insights did you gain?",
-                            "How can you apply this learning?"
-                        ]
-                    },
-                    {
-                        id: "2",
-                        title: "Mindfulness Meditation",
-                        description: "Practice mindfulness meditation for 10 minutes focusing on your breath.",
-                        category: "meditation",
-                        status: "pending",
-                        estimated_duration: 10,
-                        deadline: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-                        progress: 0,
-                        instructions: "Sit comfortably, close your eyes, and focus on your breathing.",
-                        materials: ["Comfortable space", "Timer"],
-                        progress_questions: [
-                            "How did you feel during the meditation?",
-                            "What thoughts came up?",
-                            "How did you handle distractions?",
-                            "What did you learn about your mind?"
-                        ]
-                    }
-                ];
+                // If no current assignment and API fails, use mock data
+                if (assignments.length === 0) {
+                    this.assignments = [
+                        {
+                            id: "1",
+                            title: "Daily Mood Check-in",
+                            description: "Take 5 minutes to reflect on your mood and write down 3 things you're grateful for.",
+                            category: "homework",
+                            status: "active",
+                            estimated_duration: 15,
+                            deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                            progress: 0,
+                            instructions: "Find a quiet place, take deep breaths, and reflect on your day.",
+                            materials: ["Journal", "Quiet space"],
+                            progress_questions: [
+                                "How are you feeling about this assignment?",
+                                "What challenges did you encounter?",
+                                "What insights did you gain?",
+                                "How can you apply this learning?"
+                            ]
+                        }
+                    ];
+                } else {
+                    this.assignments = assignments;
+                }
             }
         } catch (error) {
             console.error('Error loading assignments:', error);
