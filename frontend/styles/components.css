@@ -773,20 +773,48 @@
 }
 
 .next-step-btn {
-    background: #007AFF;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     margin: 0 auto;
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.next-step-btn:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
 .next-step-btn:disabled {
-    background: #cbd5e1;
+    background: #e2e8f0;
     color: #94a3b8;
+    box-shadow: none;
     cursor: not-allowed;
 }
 
 .next-step-btn.ready {
-    background: #34C759;
+    background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+    box-shadow: 0 4px 15px rgba(0, 184, 148, 0.3);
     animation: pulse 2s infinite;
+}
+
+.next-step-btn.ready:hover {
+    box-shadow: 0 6px 20px rgba(0, 184, 148, 0.4);
+}
+
+.step-actions {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
 }
 
 .complete-btn {

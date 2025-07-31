@@ -559,6 +559,9 @@ class InteractiveAssignments {
             // Setup workspace event listeners
             this.setupModernWorkspaceEventListeners();
             
+            // Setup preparation checklist
+            this.setupPreparationChecklist();
+            
             console.log('startAssignment: Assignment started successfully');
         } catch (error) {
             console.error('startAssignment: Error starting assignment:', error);
@@ -644,6 +647,11 @@ class InteractiveAssignments {
                                         <span class="checkmark"></span>
                                         I'm ready to focus and engage
                                     </label>
+                                </div>
+                                <div class="step-actions">
+                                    <button class="next-step-btn" data-step="2" disabled>
+                                        <i class="fas fa-arrow-right"></i> Start Practice
+                                    </button>
                                 </div>
                             </div>
                                             <button class="next-step-btn" data-step="2" disabled>
@@ -787,8 +795,7 @@ class InteractiveAssignments {
     }
 
     setupModernWorkspaceEventListeners() {
-        // Setup preparation checklist
-        this.setupPreparationChecklist();
+        console.log('Setting up modern workspace event listeners');
         
         // Setup timer functionality
         this.setupTimerFunctionality();
@@ -877,18 +884,26 @@ class InteractiveAssignments {
     }
 
     setupPreparationChecklist() {
+        console.log('Setting up preparation checklist');
         const checkboxes = document.querySelectorAll('.preparation-checklist input[type="checkbox"]');
-        const nextBtn = document.querySelector('.next-step-btn[onclick*="nextStep(2)"]');
+        const nextBtn = document.querySelector('.next-step-btn[data-step="2"]');
+        
+        console.log('Found checkboxes:', checkboxes.length);
+        console.log('Found next button:', nextBtn);
         
         checkboxes.forEach(checkbox => {
             checkbox.addEventListener('change', () => {
                 const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                console.log('All checkboxes checked:', allChecked);
+                
                 if (nextBtn) {
                     nextBtn.disabled = !allChecked;
                     if (allChecked) {
                         nextBtn.classList.add('ready');
+                        nextBtn.removeAttribute('disabled');
                     } else {
                         nextBtn.classList.remove('ready');
+                        nextBtn.setAttribute('disabled', 'disabled');
                     }
                 }
             });
