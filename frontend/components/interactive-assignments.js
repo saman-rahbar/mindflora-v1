@@ -1,6 +1,7 @@
 // Interactive Assignments Component
 class InteractiveAssignments {
     constructor() {
+        console.log('InteractiveAssignments constructor called');
         this.container = null;
         this.assignments = [];
         this.currentAssignment = null;
@@ -15,38 +16,60 @@ class InteractiveAssignments {
     }
 
     async init(containerId) {
+        console.log('InteractiveAssignments init called with containerId:', containerId);
         this.container = document.getElementById(containerId);
         if (!this.container) {
-            console.error('Interactive assignments container not found');
+            console.error('Interactive assignments container not found:', containerId);
             return;
         }
+        console.log('Container found:', this.container);
 
+        console.log('Loading assignments data...');
         await this.loadAssignments();
+        console.log('Assignments loaded:', this.assignments.length, 'assignments');
+        
+        console.log('Rendering assignments...');
         this.render();
+        console.log('Setting up event listeners...');
         this.setupEventListeners();
+        console.log('InteractiveAssignments initialization complete');
     }
 
     async loadAssignments() {
         try {
+            console.log('loadAssignments: Starting to load assignments');
+            
             // Check for current assignment from therapy session
             const currentAssignment = localStorage.getItem('currentAssignment');
             let assignments = [];
             
+            console.log('loadAssignments: Current assignment from localStorage:', currentAssignment);
+            
             if (currentAssignment) {
-                const parsedAssignment = JSON.parse(currentAssignment);
-                assignments.push(parsedAssignment);
+                try {
+                    const parsedAssignment = JSON.parse(currentAssignment);
+                    assignments.push(parsedAssignment);
+                    console.log('loadAssignments: Added assignment from localStorage:', parsedAssignment);
+                } catch (parseError) {
+                    console.error('loadAssignments: Error parsing localStorage assignment:', parseError);
+                }
             }
             
+            console.log('loadAssignments: Making API call to therapy/assignments');
             const response = await apiCall('therapy/assignments');
+            console.log('loadAssignments: API response:', response);
+            
             if (response && response.data) {
                 // Merge with API assignments, avoiding duplicates
                 const apiAssignments = response.data.filter(apiAssignment => 
                     !assignments.some(existing => existing.id === apiAssignment.id)
                 );
                 this.assignments = [...assignments, ...apiAssignments];
+                console.log('loadAssignments: Merged assignments with API data:', this.assignments);
             } else {
                 // If no current assignment and API fails, use mock data
                 if (assignments.length === 0) {
+                    console.log('loadAssignments: No assignments found, using mock data');
                     this.assignments = [
                         {
                             id: "1",
@@ -69,6 +92,7 @@ class InteractiveAssignments {
                     ];
                 } else {
                     this.assignments = assignments;
+                    console.log('loadAssignments: Using localStorage assignments only:', this.assignments);
                 }
             }
         } catch (error) {
@@ -98,7 +122,17 @@ class InteractiveAssignments {
     }
 
     render() {
-        this.container.innerHTML = `
+        console.log('render: Starting to render assignments component');
+        console.log('render: Container:', this.container);
+        console.log('render: Assignments to render:', this.assignments);
+        
+        if (!this.container) {
+            console.error('render: Container is null, cannot render');
+            return;
+        }
+        
+        try {
+            this.container.innerHTML = `
             <div class="interactive-assignments">
                 <div class="assignments-header">
                     <h2><i class="fas fa-tasks"></i> Your Assignments</h2>
@@ -157,6 +191,21 @@ class InteractiveAssignments {
                 </div>
             </div>
         `;
+            console.log('render: Successfully rendered assignments component');
+        } catch (error) {
+            console.error('render: Error rendering assignments:', error);
+            this.container.innerHTML = `
+                <div class="interactive-assignments">
+                    <div class="assignments-header">
+                        <h2><i class="fas fa-tasks"></i> Your Assignments</h2>
+                    </div>
+                    <div style="padding: 40px; text-align: center;">
+                        <p>Error rendering assignments: ${error.message}</p>
+                        <button onclick="window.interactiveAssignments.render()">Try Again</button>
+                    </div>
+                </div>
+            `;
+        }
     }
 
     renderAssignments() {

@@ -1600,19 +1600,26 @@
         // Assignments functions
         async function loadAssignments() {
             try {
+                console.log('Loading assignments...');
+                console.log('InteractiveAssignments available:', typeof InteractiveAssignments !== 'undefined');
+                
                 // Initialize interactive assignments component
                 if (typeof InteractiveAssignments !== 'undefined') {
                     // Create new instance if it doesn't exist
                     if (!window.interactiveAssignments) {
+                        console.log('Creating new InteractiveAssignments instance');
                         window.interactiveAssignments = new InteractiveAssignments();
                     }
+                    console.log('Initializing assignments component...');
                     await window.interactiveAssignments.init('assignments-container');
+                    console.log('Assignments component initialized successfully');
                 } else {
                     console.error('Interactive assignments component not loaded');
                     document.getElementById('assignments-container').innerHTML = '<p>Assignments component not available</p>';
                 }
             } catch (error) {
                 console.error('Error loading assignments:', error);
+                console.error('Error stack:', error.stack);
                 document.getElementById('assignments-container').innerHTML = '<p>Error loading assignments: ' + error.message + '</p>';
             }
         }
