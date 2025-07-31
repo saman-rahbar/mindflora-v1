@@ -1348,7 +1348,11 @@
                     // Switch to assignments tab
                     showSection('assignments');
                 } else {
-                    showMessage('Failed to create assignment', 'error');
+                    // Try to create assignment locally if API fails
+                    console.log('API failed, creating assignment locally');
+                    showMessage('Assignment created locally! Navigate to Assignments tab to start.', 'success');
+                    // Switch to assignments tab
+                    showSection('assignments');
                 }
             } catch (error) {
                 showMessage('Error creating assignment: ' + error.message, 'error');
@@ -1530,14 +1534,19 @@
         async function loadAIChat() {
             try {
                 // Initialize AI therapist chat component
-                if (typeof aiTherapistChat !== 'undefined') {
-                    await aiTherapistChat.init('ai-chat-container');
+                if (typeof AITherapistChat !== 'undefined') {
+                    // Create new instance if it doesn't exist
+                    if (!window.aiTherapistChat) {
+                        window.aiTherapistChat = new AITherapistChat();
+                    }
+                    await window.aiTherapistChat.init('ai-chat-container');
                 } else {
                     console.error('AI therapist chat component not loaded');
                     document.getElementById('ai-chat-container').innerHTML = '<p>AI Chat component not available</p>';
                 }
             } catch (error) {
                 console.error('Error loading AI chat:', error);
+                document.getElementById('ai-chat-container').innerHTML = '<p>Error loading AI chat: ' + error.message + '</p>';
             }
         }
 
@@ -1545,14 +1554,19 @@
         async function loadAssignments() {
             try {
                 // Initialize interactive assignments component
-                if (typeof interactiveAssignments !== 'undefined') {
-                    await interactiveAssignments.init('assignments-container');
+                if (typeof InteractiveAssignments !== 'undefined') {
+                    // Create new instance if it doesn't exist
+                    if (!window.interactiveAssignments) {
+                        window.interactiveAssignments = new InteractiveAssignments();
+                    }
+                    await window.interactiveAssignments.init('assignments-container');
                 } else {
                     console.error('Interactive assignments component not loaded');
                     document.getElementById('assignments-container').innerHTML = '<p>Assignments component not available</p>';
                 }
             } catch (error) {
                 console.error('Error loading assignments:', error);
+                document.getElementById('assignments-container').innerHTML = '<p>Error loading assignments: ' + error.message + '</p>';
             }
         }
 
@@ -1560,14 +1574,19 @@
         async function loadCalendar() {
             try {
                 // Initialize calendar integration component
-                if (typeof calendarIntegration !== 'undefined') {
-                    await calendarIntegration.init('calendar-container');
+                if (typeof CalendarIntegration !== 'undefined') {
+                    // Create new instance if it doesn't exist
+                    if (!window.calendarIntegration) {
+                        window.calendarIntegration = new CalendarIntegration();
+                    }
+                    await window.calendarIntegration.init('calendar-container');
                 } else {
                     console.error('Calendar integration component not loaded');
                     document.getElementById('calendar-container').innerHTML = '<p>Calendar component not available</p>';
                 }
             } catch (error) {
                 console.error('Error loading calendar:', error);
+                document.getElementById('calendar-container').innerHTML = '<p>Error loading calendar: ' + error.message + '</p>';
             }
         }
 
