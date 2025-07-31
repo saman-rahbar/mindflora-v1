@@ -644,10 +644,10 @@ class InteractiveAssignments {
                             </div>
 
                             <div class="completion-actions">
-                                <button class="complete-btn" onclick="interactiveAssignments.completeAssignment('${assignment.id}')">
+                                <button class="complete-btn" data-assignment-id="${assignment.id}">
                                     <i class="fas fa-check"></i> Complete Assignment
                                 </button>
-                                <button class="save-btn" onclick="interactiveAssignments.saveProgress('${assignment.id}')">
+                                <button class="save-btn" data-assignment-id="${assignment.id}">
                                     <i class="fas fa-save"></i> Save for Later
                                 </button>
                             </div>
@@ -709,6 +709,62 @@ class InteractiveAssignments {
         
         // Setup progress tracking
         this.setupProgressTracking();
+        
+        // Setup completion buttons
+        this.setupCompletionButtons();
+    }
+
+    setupCompletionButtons() {
+        // Complete Assignment button
+        const completeBtn = document.querySelector('.complete-btn');
+        if (completeBtn) {
+            completeBtn.addEventListener('click', async () => {
+                const assignmentId = completeBtn.getAttribute('data-assignment-id');
+                console.log('Complete button clicked for assignment:', assignmentId);
+                
+                // Add visual feedback
+                completeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Completing...';
+                completeBtn.disabled = true;
+                
+                try {
+                    await this.completeAssignment(assignmentId);
+                } catch (error) {
+                    console.error('Error completing assignment:', error);
+                    completeBtn.innerHTML = '<i class="fas fa-check"></i> Complete Assignment';
+                    completeBtn.disabled = false;
+                }
+            });
+        } else {
+            console.warn('Complete button not found');
+        }
+        
+        // Save for Later button
+        const saveBtn = document.querySelector('.save-btn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', async () => {
+                const assignmentId = saveBtn.getAttribute('data-assignment-id');
+                console.log('Save button clicked for assignment:', assignmentId);
+                
+                // Add visual feedback
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                saveBtn.disabled = true;
+                
+                try {
+                    await this.saveProgress(assignmentId);
+                    saveBtn.innerHTML = '<i class="fas fa-check"></i> Saved!';
+                    setTimeout(() => {
+                        saveBtn.innerHTML = '<i class="fas fa-save"></i> Save for Later';
+                        saveBtn.disabled = false;
+                    }, 2000);
+                } catch (error) {
+                    console.error('Error saving progress:', error);
+                    saveBtn.innerHTML = '<i class="fas fa-save"></i> Save for Later';
+                    saveBtn.disabled = false;
+                }
+            });
+        } else {
+            console.warn('Save button not found');
+        }
     }
 
     setupPreparationChecklist() {
@@ -911,11 +967,19 @@ class InteractiveAssignments {
                         <span class="stat-label">Achievement Unlocked</span>
                     </div>
                 </div>
-                <button class="btn btn-primary" onclick="interactiveAssignments.render()">
+                <button class="btn btn-primary back-to-assignments-btn">
                     <i class="fas fa-arrow-left"></i> Back to Assignments
                 </button>
             </div>
         `;
+        
+        // Add event listener for back button
+        const backBtn = this.container.querySelector('.back-to-assignments-btn');
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                this.render();
+            });
+        }
     }
 
     async saveProgress(assignmentId) {
@@ -933,12 +997,38 @@ class InteractiveAssignments {
 
     async updateAssignment(assignment) {
         try {
-            await apiCall(`therapy/assignments/${assignment.id}`, {
+            console.log('Updating assignment:', assignment);
+            
+            // Try to update via API
+            const response = await apiCall(`/therapy/assignments/${assignment.id}`, {
                 method: 'PUT',
                 body: JSON.stringify(assignment)
             });
+            
+            console.log('Assignment update response:', response);
+            
+            // Also update localStorage if this was the current assignment
+            const currentAssignment = localStorage.getItem('currentAssignment');
+            if (currentAssignment) {
+                const parsed = JSON.parse(currentAssignment);
+                if (parsed.id === assignment.id) {
+                    localStorage.setItem('currentAssignment', JSON.stringify(assignment));
+                    console.log('Updated assignment in localStorage');
+                }
+            }
+            
         } catch (error) {
-            console.error('Error updating assignment:', error);
+            console.error('Error updating assignment via API:', error);
+            
+            // Fallback: update localStorage only
+            const currentAssignment = localStorage.getItem('currentAssignment');
+            if (currentAssignment) {
+                const parsed = JSON.parse(currentAssignment);
+                if (parsed.id === assignment.id) {
+                    localStorage.setItem('currentAssignment', JSON.stringify(assignment));
+                    console.log('Updated assignment in localStorage as fallback');
+                }
+            }
         }
     }
 
