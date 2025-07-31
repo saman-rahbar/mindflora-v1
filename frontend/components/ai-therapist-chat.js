@@ -73,10 +73,9 @@ class AITherapistChat {
                 </div>
 
                 <div class="chat-container">
-                    <div class="chat-messages" id="chat-messages">
-                        ${this.renderWelcomeMessage()}
-                        ${this.renderMessages()}
-                    </div>
+                                    <div class="chat-messages" id="chat-messages">
+                    ${this.messages.length === 0 ? this.renderWelcomeMessage() : this.renderMessages()}
+                </div>
 
                     <div class="chat-input-section">
                         <div class="input-container">
@@ -270,7 +269,7 @@ class AITherapistChat {
             this.addMessage('therapist', response.content, response.actionItems);
             
             // Extract and add action items
-            if (response.actionItems) {
+            if (response.actionItems && response.actionItems.length > 0) {
                 response.actionItems.forEach(item => {
                     this.addActionItem(item.description, item.deadline, item.title);
                 });
@@ -309,13 +308,6 @@ class AITherapistChat {
                 // Update session with new data
                 if (response.session_id) {
                     this.currentSession.id = response.session_id;
-                }
-                
-                // Add action items if provided
-                if (response.action_items && response.action_items.length > 0) {
-                    response.action_items.forEach(item => {
-                        this.addActionItem(item.description, item.deadline, item.title);
-                    });
                 }
                 
                 return {
@@ -364,7 +356,7 @@ class AITherapistChat {
             sender,
             content,
             timestamp: new Date(),
-            actionItems
+            actionItems: actionItems || []
         };
 
         this.currentSession.messages.push(message);
@@ -376,6 +368,7 @@ class AITherapistChat {
         }
 
         this.render();
+        this.scrollToBottom();
     }
 
     extractTopics(message) {

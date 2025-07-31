@@ -38,8 +38,16 @@ class ChatSession(BaseModel):
     action_items: List[Dict[str, Any]]
     insights: Dict[str, Any]
 
-# Initialize LLM client
-llm_client = create_llm_client("openai")  # or "anthropic" or "mock"
+# Initialize LLM client - use anthropic as fallback if OpenAI not available
+try:
+    llm_client = create_llm_client("openai")
+except Exception as e:
+    print(f"OpenAI not available, using Anthropic: {e}")
+    try:
+        llm_client = create_llm_client("anthropic")
+    except Exception as e2:
+        print(f"Anthropic not available, using mock: {e2}")
+        llm_client = create_llm_client("mock")
 
 # Store active sessions (in production, use Redis or database)
 active_sessions = {}
