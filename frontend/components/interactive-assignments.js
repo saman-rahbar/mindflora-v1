@@ -639,9 +639,6 @@ class InteractiveAssignments {
                                     </button>
                                 </div>
                             </div>
-                                            <button class="next-step-btn" data-step="2" disabled>
-                    <i class="fas fa-arrow-right"></i> Start Practice
-                </button>
                         </div>
                     </div>
 
