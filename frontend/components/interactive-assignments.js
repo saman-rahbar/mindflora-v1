@@ -68,7 +68,7 @@ class InteractiveAssignments {
             }
             
             console.log('loadAssignments: Making API call to therapy/assignments');
-            const response = await apiCall('therapy/assignments');
+            const response = await apiCall('/therapy/assignments');
             console.log('loadAssignments: API response:', response);
             
             if (response && response.data) {
@@ -181,19 +181,6 @@ class InteractiveAssignments {
                     ${this.renderAssignments()}
                 </div>
 
-                <!-- Assignment Detail Modal -->
-                <div id="assignment-modal" class="modal">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h3 id="modal-title"></h3>
-                            <button class="modal-close">&times;</button>
-                        </div>
-                        <div class="modal-body">
-                            <div id="modal-content"></div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Progress Tracking -->
                 <div class="progress-tracking">
                     <h3><i class="fas fa-chart-line"></i> Progress Overview</h3>
@@ -272,7 +259,7 @@ class InteractiveAssignments {
                     ` : ''}
                 </div>
                 <div class="assignment-actions">
-                    <button class="btn-start" data-assignment-id="${assignment.id}">
+                    <button class="btn-start start-assignment-btn" data-assignment-id="${assignment.id}">
                         <i class="fas fa-play"></i> Start
                     </button>
                     <button class="btn-view" data-assignment-id="${assignment.id}">
@@ -337,12 +324,16 @@ class InteractiveAssignments {
         });
 
         // Assignment action buttons
-        const startButtons = document.querySelectorAll('.btn-start');
+        const startButtons = document.querySelectorAll('.start-assignment-btn');
         startButtons.forEach(button => {
             button.addEventListener('click', (e) => {
                 e.preventDefault();
+                e.stopPropagation(); // Prevent card click
                 const assignmentId = button.getAttribute('data-assignment-id');
-                this.startAssignment(assignmentId);
+                if (assignmentId) {
+                    console.log('Starting assignment:', assignmentId);
+                    this.startAssignment(assignmentId);
+                }
             });
         });
 
@@ -542,18 +533,37 @@ class InteractiveAssignments {
     }
 
     async startAssignment(assignmentId) {
+        console.log('startAssignment: Starting assignment with ID:', assignmentId);
         const assignment = this.assignments.find(a => a.id === assignmentId);
-        if (!assignment) return;
+        if (!assignment) {
+            console.error('startAssignment: Assignment not found:', assignmentId);
+            return;
+        }
 
-        // Update assignment status
-        assignment.status = 'active';
-        assignment.started_at = new Date();
-
-        // Save to backend
-        await this.updateAssignment(assignment);
-
-        // Show assignment workspace
-        this.showAssignmentWorkspace(assignment);
+        try {
+            console.log('startAssignment: Found assignment:', assignment);
+            
+            // Update assignment status
+            assignment.status = 'active';
+            assignment.started_at = new Date().toISOString();
+            
+            // Save to backend
+            await this.updateAssignment(assignment);
+            
+            // Hide any open modal
+            this.hideAssignmentModal();
+            
+            // Show assignment workspace
+            this.showAssignmentWorkspace(assignment);
+            
+            // Setup workspace event listeners
+            this.setupModernWorkspaceEventListeners();
+            
+            console.log('startAssignment: Assignment started successfully');
+        } catch (error) {
+            console.error('startAssignment: Error starting assignment:', error);
+            this.showMessage('Error starting assignment: ' + error.message, 'error');
+        }
     }
 
     showAssignmentWorkspace(assignment) {
