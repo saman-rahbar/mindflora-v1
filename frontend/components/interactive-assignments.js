@@ -259,11 +259,8 @@ class InteractiveAssignments {
                     ` : ''}
                 </div>
                 <div class="assignment-actions">
-                    <button class="btn-start start-assignment-btn" data-assignment-id="${assignment.id}">
-                        <i class="fas fa-play"></i> Start
-                    </button>
-                    <button class="btn-view" data-assignment-id="${assignment.id}">
-                        <i class="fas fa-eye"></i> View
+                    <button class="btn-primary" data-assignment-id="${assignment.id}">
+                        <i class="fas fa-play"></i> Start Assignment
                     </button>
                 </div>
             </div>
@@ -324,7 +321,7 @@ class InteractiveAssignments {
         });
 
         // Assignment action buttons
-        const startButtons = document.querySelectorAll('.start-assignment-btn');
+        const startButtons = document.querySelectorAll('.assignment-actions .btn-primary');
         startButtons.forEach(button => {
             button.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -333,18 +330,6 @@ class InteractiveAssignments {
                 if (assignmentId) {
                     console.log('Starting assignment:', assignmentId);
                     this.startAssignment(assignmentId);
-                }
-            });
-        });
-
-        const viewButtons = document.querySelectorAll('.btn-view');
-        viewButtons.forEach(button => {
-            button.addEventListener('click', (e) => {
-                e.preventDefault();
-                const assignmentId = button.getAttribute('data-assignment-id');
-                const assignment = this.assignments.find(a => a.id === assignmentId);
-                if (assignment) {
-                    this.showAssignmentModal(assignment);
                 }
             });
         });

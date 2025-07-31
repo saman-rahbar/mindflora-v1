@@ -98,27 +98,27 @@
 }
 
 .assignment-card {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
-    border-radius: 20px;
-    padding: 32px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     transition: all 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid #e2e8f0;
     cursor: pointer;
-    backdrop-filter: blur(20px);
     position: relative;
     overflow: hidden;
 }
 
 .assignment-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: #cbd5e1;
 }
 
 .assignment-card.active {
-    background: linear-gradient(135deg, rgba(52, 199, 89, 0.1) 0%, rgba(48, 209, 88, 0.1) 100%);
-    border: 2px solid #34C759;
-    box-shadow: 0 8px 32px rgba(52, 199, 89, 0.2);
+    background: #f8fafc;
+    border: 1px solid #94a3b8;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .assignment-card.active::before {
@@ -127,9 +127,9 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 4px;
-    background: linear-gradient(135deg, #34C759 0%, #30D158 100%);
-    border-radius: 20px 20px 0 0;
+    height: 3px;
+    background: #3b82f6;
+    border-radius: 3px 3px 0 0;
 }
 
 .therapy-badge {
@@ -2527,14 +2527,18 @@
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #3b82f6;
     color: white;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 14px;
 }
 
 .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    background: #2563eb;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .btn-secondary {
