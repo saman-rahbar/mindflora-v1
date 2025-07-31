@@ -924,6 +924,28 @@
 .chat-controls {
     display: flex;
     gap: 12px;
+    align-items: center;
+}
+
+.therapy-selector {
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: white;
+    font-size: 14px;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.therapy-selector:hover {
+    border-color: #3b82f6;
+}
+
+.therapy-selector:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .chat-container {

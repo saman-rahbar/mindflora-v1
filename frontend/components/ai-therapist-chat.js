@@ -55,6 +55,14 @@ class AITherapistChat {
                         </div>
                     </div>
                     <div class="chat-controls">
+                        <select id="therapy-type-selector" class="therapy-selector">
+                            <option value="cbt">🧠 CBT</option>
+                            <option value="logotherapy">🎯 Logotherapy</option>
+                            <option value="act">🌱 ACT</option>
+                            <option value="dbt">⚖️ DBT</option>
+                            <option value="somotherapy">💆 Somotherapy</option>
+                            <option value="positive_psychology">✨ Positive Psychology</option>
+                        </select>
                         <button class="btn-icon" id="export-session-btn">
                             <i class="fas fa-download"></i>
                         </button>
@@ -226,6 +234,15 @@ class AITherapistChat {
                 this.resetSession();
             });
         }
+
+        // Therapy type selector
+        const therapySelector = document.getElementById('therapy-type-selector');
+        if (therapySelector) {
+            therapySelector.addEventListener('change', (e) => {
+                this.currentSession.therapyType = e.target.value;
+                console.log('Therapy type changed to:', e.target.value);
+            });
+        }
     }
 
     async sendMessage() {
@@ -275,54 +292,71 @@ class AITherapistChat {
 
     async getTherapistResponse(userMessage) {
         try {
-            const response = await apiCall('therapy/chat', {
+            // Get user context for personalization
+            const userContext = this.getUserContext();
+            
+            const response = await apiCall('/ai-chat/send-message', {
                 method: 'POST',
                 body: JSON.stringify({
                     message: userMessage,
-                    session_id: this.currentSession.id,
-                    therapist_personality: this.therapistPersonality,
-                    conversation_history: this.currentSession.messages.slice(-5) // Last 5 messages for context
+                    session_id: this.currentSession?.id,
+                    therapy_type: this.currentSession?.therapyType || 'cbt',
+                    user_context: userContext
                 })
             });
-
-            if (response && response.content) {
+            
+            if (response && response.response) {
+                // Update session with new data
+                if (response.session_id) {
+                    this.currentSession.id = response.session_id;
+                }
+                
+                // Add action items if provided
+                if (response.action_items && response.action_items.length > 0) {
+                    response.action_items.forEach(item => {
+                        this.addActionItem(item.description, item.deadline, item.title);
+                    });
+                }
+                
                 return {
-                    content: response.content,
+                    content: response.response,
                     actionItems: response.action_items || []
                 };
             } else {
-                // Fallback response with personalized content
-                const fallbackResponses = [
-                    "I understand how you're feeling. Let's work through this together. What specific aspect would you like to focus on?",
-                    "Thank you for sharing that with me. I'm here to listen and support you. How can I help you today?",
-                    "I appreciate you opening up to me. Let's explore this together. What would be most helpful for you right now?",
-                    "I hear you, and I want you to know that your feelings are valid. Let's work on this step by step."
-                ];
-                
-                return {
-                    content: fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)],
-                    actionItems: [
-                        {
-                            title: "Reflection Exercise",
-                            description: "Take 5 minutes to reflect on what we discussed",
-                            deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-                        }
-                    ]
-                };
+                throw new Error('Invalid response from AI service');
             }
         } catch (error) {
             console.error('Error getting therapist response:', error);
+            
+            // Fallback response if API fails
+            const fallbackResponses = [
+                "I hear you, and I want you to know that your feelings are valid. What you're experiencing is a common human experience, and it's okay to feel this way.",
+                "That sounds really challenging. I can sense the weight of what you're carrying. Remember, you don't have to face this alone.",
+                "I appreciate you sharing this with me. It takes courage to be vulnerable. Let's work together to find some clarity."
+            ];
+            
             return {
-                content: "I'm here to listen and help. Could you tell me more about what's on your mind?",
+                content: fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)],
                 actionItems: [
                     {
-                        title: "Daily Check-in",
-                        description: "Practice daily self-reflection",
+                        title: "Reflection Exercise",
+                        description: "Take 5 minutes to reflect on what we discussed",
                         deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
                     }
                 ]
             };
         }
+    }
+
+    getUserContext() {
+        // Get user info from localStorage or API
+        const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+        return {
+            name: userInfo.first_name || 'User',
+            age: userInfo.age || null,
+            education_level: userInfo.education_level || null,
+            therapy_preference: userInfo.therapy_preference || 'cbt'
+        };
     }
 
     addMessage(sender, content, actionItems = null) {

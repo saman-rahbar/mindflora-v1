@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from api_gateway.routers import user, auth, gamification, therapy, journaling, analytics, calendar
+from api_gateway.routers import user, auth, gamification, therapy, journaling, analytics, calendar, ai_chat
 import uvicorn
 from datetime import datetime
 import logging
@@ -57,6 +57,7 @@ app.include_router(gamification.router, prefix="/api/v1/gamification", tags=["ga
 app.include_router(journaling.router, prefix="/api/v1/journaling", tags=["journaling"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
 app.include_router(calendar.router, prefix="/api/v1/calendar", tags=["calendar"])
+app.include_router(ai_chat.router, prefix="/api/v1/ai-chat", tags=["ai-chat"])
 
 @app.get("/")
 async def root():
