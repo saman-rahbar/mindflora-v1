@@ -1258,7 +1258,7 @@
                                 <p><strong>${(homework.type || 'personalized_assignment').replace('_', ' ').toUpperCase()}</strong></p>
                                 <p>${homework.description || 'Complete your personalized homework assignment'}</p>
                                 <p><small>Duration: ${homework.duration || '1 week'}</small></p>
-                                <button class="btn btn-primary" style="margin-top: 10px;" onclick="startAssignmentFromTherapy('${homework.description || 'Complete your personalized homework assignment'}')">
+                                <button class="btn btn-primary start-assignment-btn" style="margin-top: 10px;" data-homework-description="${homework.description || 'Complete your personalized homework assignment'}">
                                     <i class="fas fa-play"></i> Start Assignment
                                 </button>
                             </div>
@@ -1283,6 +1283,18 @@
             const therapySection = document.getElementById('therapy');
             const formCard = therapySection.querySelector('.card');
             formCard.insertAdjacentHTML('afterend', resultsHTML);
+            
+            // Add event listener for the Start Assignment button
+            const startAssignmentBtn = therapySection.querySelector('.start-assignment-btn');
+            if (startAssignmentBtn) {
+                startAssignmentBtn.addEventListener('click', function() {
+                    console.log('Start Assignment button clicked!');
+                    this.style.opacity = '0.7';
+                    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Assignment...';
+                    const homeworkDescription = this.getAttribute('data-homework-description');
+                    startAssignmentFromTherapy(homeworkDescription);
+                });
+            }
         }
 
         // Traditional Therapy functions
@@ -1321,6 +1333,7 @@
         });
 
         async function startAssignmentFromTherapy(homeworkDescription) {
+            console.log('Starting assignment from therapy with description:', homeworkDescription);
             try {
                 // Create a new assignment from the therapy homework
                 const assignmentData = {
