@@ -78,9 +78,9 @@ class AITherapistChat {
                 </div>
 
                 <div class="chat-container">
-                                    <div class="chat-messages" id="chat-messages">
-                    ${this.messages.length === 0 ? this.renderWelcomeMessage() : this.renderMessages()}
-                </div>
+                    <div class="chat-messages" id="chat-messages">
+                        ${this.messages.length === 0 ? this.renderWelcomeMessage() : this.renderMessages()}
+                    </div>
 
                     <div class="chat-input-section">
                         <div class="input-container">
@@ -98,25 +98,18 @@ class AITherapistChat {
                                 😰 Feeling Anxious
                             </button>
                             <button class="quick-action-btn" data-message="I need help with stress management">
-                                😤 Stress Management
+                                😓 Stress Management
                             </button>
-                            <button class="quick-action-btn" data-message="I want to work on my goals">
-                                🎯 Goal Setting
-                            </button>
-                            <button class="quick-action-btn" data-message="I need someone to talk to">
-                                💬 Just Talk
+                            <button class="quick-action-btn" data-message="I want to work on my self-esteem">
+                                🌟 Self-Esteem
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Action Items Panel -->
                 <div class="action-items-panel">
-                    <div class="panel-header">
-                        <h4><i class="fas fa-tasks"></i> Action Items</h4>
-                        <span class="item-count">${this.actionItems.length} items</span>
-                    </div>
-                    <div class="action-items-list" id="action-items-list">
+                    <h3>Action Items</h3>
+                    <div class="action-items-list">
                         ${this.renderActionItems()}
                     </div>
                 </div>
@@ -138,33 +131,29 @@ class AITherapistChat {
     }
 
     renderMessages() {
-        return this.messages.map(message => `
-            <div class="message ${message.sender}">
-                <div class="message-avatar">
-                    <i class="fas fa-${message.sender === 'user' ? 'user' : 'user-md'}"></i>
-                </div>
+        return this.messages.map((msg, index) => `
+            <div class="chat-message ${msg.sender === 'user' ? 'user-message' : 'therapist-message'}">
                 <div class="message-content">
-                    ${message.content}
-                    ${message.actionItems ? this.renderMessageActionItems(message.actionItems) : ''}
+                    <div class="message-text">${msg.content}</div>
+                    ${msg.sender === 'therapist' && msg.actionItems && msg.actionItems.length > 0 ? 
+                        `<div class="message-action-items">
+                            <h4>Suggested Exercises:</h4>
+                            ${this.renderMessageActionItems(msg.actionItems)}
+                        </div>` 
+                        : ''}
+                    <div class="message-time">${new Date(msg.timestamp).toLocaleTimeString()}</div>
                 </div>
             </div>
         `).join('');
     }
 
     renderMessageActionItems(actionItems) {
-        if (!actionItems || actionItems.length === 0) return '';
-        
-        return `
-            <div class="action-items" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.1);">
-                <h5 style="margin: 0 0 8px 0; font-size: 12px; color: #007AFF;">Action Items:</h5>
-                ${actionItems.map(item => `
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 12px;">
-                        <i class="fas fa-lightbulb" style="color: #FFD93D;"></i>
-                        <span>${item.title || item.description}</span>
-                    </div>
-                `).join('')}
+        return actionItems.map(item => `
+            <div class="message-action-item">
+                <i class="fas fa-check-circle"></i>
+                <span>${item.description}</span>
             </div>
-        `;
+        `).join('');
     }
 
     renderActionItems() {
@@ -254,36 +243,38 @@ class AITherapistChat {
         const message = input.value.trim();
         
         if (!message) return;
-
-        // Add user message
-        this.addMessage('user', message);
-        input.value = '';
-        document.getElementById('send-message').disabled = true;
-
-        // Show typing indicator
-        this.showTypingIndicator();
-
+        
         try {
-            // Send to AI therapist
+            // Disable input and show typing indicator
+            input.disabled = true;
+            document.getElementById('send-message').disabled = true;
+            this.showTypingIndicator();
+            
+            // Add user message
+            this.addMessage('user', message);
+            
+            // Clear input
+            input.value = '';
+            
+            // Get AI response
             const response = await this.getTherapistResponse(message);
+            
+            // Add AI response
+            this.addMessage('therapist', response.response, response.actionItems);
             
             // Hide typing indicator
             this.hideTypingIndicator();
             
-            // Add therapist response
-            this.addMessage('therapist', response.content, response.actionItems);
+            // Re-enable input
+            input.disabled = false;
+            document.getElementById('send-message').disabled = false;
+            input.focus();
             
-            // Extract and add action items
-            if (response.actionItems && response.actionItems.length > 0) {
-                response.actionItems.forEach(item => {
-                    this.addActionItem(item.description, item.deadline, item.title);
-                });
-            }
-
         } catch (error) {
-            console.error('Error getting therapist response:', error);
+            console.error('Error sending message:', error);
             this.hideTypingIndicator();
-            this.addMessage('therapist', 'I apologize, but I\'m having trouble processing your message right now. Please try again in a moment.');
+            input.disabled = false;
+            document.getElementById('send-message').disabled = false;
         }
     }
 
@@ -305,8 +296,11 @@ class AITherapistChat {
                 user_context: userContext
             });
             
-            const response = await apiCall('/ai-chat/send-message', {
+            const response = await apiCall('/api/v1/ai-chat/send-message', {
                 method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify({
                     message: userMessage,
                     session_id: this.currentSession?.id,
@@ -314,41 +308,59 @@ class AITherapistChat {
                     user_context: userContext
                 })
             });
-            
-            console.log('📨 AI response received:', response);
-            
-            if (response && response.response) {
-                // Update session with new data
-                if (response.session_id) {
-                    this.currentSession.id = response.session_id;
-                }
-                
-                return {
-                    content: response.response,
-                    actionItems: response.action_items || []
-                };
-            } else {
-                throw new Error('Invalid response from AI service');
+
+            console.log('✅ AI response received:', response);
+
+            if (!response) {
+                throw new Error('No response from AI service');
             }
-        } catch (error) {
-            console.error('Error getting therapist response:', error);
-            
-            // Fallback response if API fails
-            const fallbackResponses = [
-                "I hear you, and I want you to know that your feelings are valid. What you're experiencing is a common human experience, and it's okay to feel this way.",
-                "That sounds really challenging. I can sense the weight of what you're carrying. Remember, you don't have to face this alone.",
-                "I appreciate you sharing this with me. It takes courage to be vulnerable. Let's work together to find some clarity."
-            ];
-            
-            return {
-                content: fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)],
-                actionItems: [
-                    {
-                        title: "Reflection Exercise",
-                        description: "Take 5 minutes to reflect on what we discussed",
-                        deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+
+            if (response.action_items && response.action_items.length > 0) {
+                // Filter only exercise-type action items
+                const exercises = response.action_items.filter(item => 
+                    item.type === 'exercise' || 
+                    item.description.toLowerCase().includes('exercise') ||
+                    item.description.toLowerCase().includes('practice') ||
+                    item.description.toLowerCase().includes('try this')
+                );
+
+                // Automatically create assignments for exercises
+                for (const exercise of exercises) {
+                    try {
+                        await apiCall('/api/v1/therapy/assignments', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                title: exercise.title || 'Therapeutic Exercise',
+                                description: exercise.description,
+                                type: 'exercise',
+                                due_date: exercise.deadline || null,
+                                status: 'pending'
+                            })
+                        });
+                        console.log('✅ Assignment created:', exercise.title);
+                    } catch (error) {
+                        console.error('❌ Error creating assignment:', error);
                     }
-                ]
+                }
+
+                return {
+                    response: response.response,
+                    actionItems: exercises
+                };
+            }
+
+            return {
+                response: response.response,
+                actionItems: []
+            };
+        } catch (error) {
+            console.error('❌ Error getting therapist response:', error);
+            return {
+                response: "I'm here to support you. Let's work together to explore what's on your mind. What would be most helpful for you right now?",
+                actionItems: []
             };
         }
     }
@@ -396,24 +408,26 @@ class AITherapistChat {
         });
     }
 
-    addActionItem(description, deadline = null, title = null) {
+    async addActionItem(description, deadline = null, title = null) {
         const actionItem = {
-            id: Date.now(),
-            title: title || 'Action Item',
+            id: Date.now().toString(),
             description,
             deadline,
+            title: title || 'Therapeutic Exercise',
             completed: false,
-            created_at: new Date(),
-            session_id: this.currentSession.id
+            created_at: new Date().toISOString(),
+            type: 'exercise'
         };
 
-        this.actionItems.push(actionItem);
-        this.currentSession.actionItems.push(actionItem);
-
-        // Save to backend
-        this.saveActionItem(actionItem);
-
-        this.render();
+        try {
+            const savedItem = await this.saveActionItem(actionItem);
+            this.actionItems.push(savedItem);
+            this.render();
+            return savedItem;
+        } catch (error) {
+            console.error('Error adding action item:', error);
+            return null;
+        }
     }
 
     async saveActionItem(actionItem) {

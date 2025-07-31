@@ -7,6 +7,7 @@ import openai
 from openai import AsyncOpenAI
 import anthropic
 from anthropic import AsyncAnthropic
+import httpx
 
 class LLMClient(ABC):
     """Abstract base class for LLM clients"""
@@ -352,14 +353,115 @@ class MockLLMClient(LLMClient):
             }
         }
 
+class OllamaLLMClient(LLMClient):
+    """Client for interacting with Ollama API"""
+    def __init__(self, model: str = "llama2:7b", host: str = "http://localhost:11434", **kwargs):
+        super().__init__()
+        self.model = model
+        self.host = host
+        self.client = httpx.AsyncClient(timeout=120.0)  # Increased timeout to 2 minutes
+        
+    async def generate_response(self, prompt: str, context: Optional[Dict[str, Any]] = None) -> str:
+        """Generate a response using Ollama API"""
+        try:
+            # Format the prompt with therapy context
+            therapy_type = context.get('therapy_type', 'cbt') if context else 'cbt'
+            user_context = context.get('user_context', {}) if context else {}
+            
+            system_prompt = f"""You are a professional therapist specializing in {therapy_type.upper()}. 
+            Your responses should be empathetic, supportive, and aligned with {therapy_type.upper()} principles.
+            When suggesting exercises or practices, be explicit by starting with 'Exercise:' or 'Practice:'.
+            Keep responses focused and concise."""
+            
+            # Add user context if available
+            if user_context:
+                system_prompt += f"\nUser Context: {json.dumps(user_context)}"
+            
+            # Make API call to Ollama
+            response = await self.client.post(
+                f"{self.host}/api/generate",
+                json={
+                    "model": self.model,
+                    "prompt": prompt,
+                    "system": system_prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.7,
+                        "top_p": 0.9
+                    }
+                }
+            )
+            response.raise_for_status()
+            result = response.json()
+            return result['response']
+            
+        except Exception as e:
+            print(f"❌ Error generating response from Ollama: {e}")
+            return "I apologize, but I'm having trouble processing your request right now. Let's try again in a moment."
+
+    async def analyze_content(self, content: str, analysis_type: str = "therapy") -> Dict[str, Any]:
+        """Analyze content for therapeutic insights"""
+        try:
+            # Make API call to Ollama for content analysis
+            response = await self.client.post(
+                f"{self.host}/api/generate",
+                json={
+                    "model": self.model,
+                    "prompt": f"""Analyze this therapy session content and extract key information:
+                    {content}
+                    
+                    Format your response as JSON with these fields:
+                    - themes: List of main therapeutic themes discussed
+                    - mood: Overall mood assessment
+                    - suggested_topics: List of relevant topics to explore
+                    - action_items: List of specific therapeutic exercises or practices mentioned
+                    """,
+                    "system": "You are an expert therapy session analyzer. Provide structured analysis in valid JSON format.",
+                    "stream": False
+                }
+            )
+            response.raise_for_status()
+            result = response.json()
+            
+            # Parse the response as JSON
+            try:
+                analysis = json.loads(result['response'])
+                return {
+                    "themes": analysis.get("themes", []),
+                    "mood": analysis.get("mood"),
+                    "suggested_topics": analysis.get("suggested_topics", []),
+                    "action_items": analysis.get("action_items", [])
+                }
+            except json.JSONDecodeError:
+                # Fallback if response isn't valid JSON
+                return {
+                    "themes": [],
+                    "mood": None,
+                    "suggested_topics": [],
+                    "action_items": []
+                }
+                
+        except Exception as e:
+            print(f"❌ Error analyzing content with Ollama: {e}")
+            return {
+                "themes": [],
+                "mood": None,
+                "suggested_topics": [],
+                "action_items": []
+            }
+
 # Factory function to create LLM client
-def create_llm_client(client_type: str = "mock", **kwargs) -> LLMClient:
-    """Create an LLM client based on configuration"""
+def create_llm_client(client_type: str = "ollama", **kwargs) -> LLMClient:
+    """Factory function to create LLM clients"""
     if client_type == "openai":
         return OpenAILLMClient(**kwargs)
     elif client_type == "anthropic":
         return AnthropicLLMClient(**kwargs)
+    elif client_type == "ollama":
+        return OllamaLLMClient(**kwargs)
+    elif client_type == "mock":
+        return MockLLMClient(**kwargs)
     else:
-        return MockLLMClient()
+        raise ValueError(f"Unknown LLM client type: {client_type}")
 
 # Note: LLM client is initialized in the router files 

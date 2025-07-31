@@ -1,0 +1,10 @@
+FROM ollama/ollama:latest
+
+# Install Mistral model during build
+RUN ollama pull mistral
+
+# Expose Ollama's default port
+EXPOSE 11434
+
+# Run Ollama serve by default
+CMD ["ollama", "serve"] 

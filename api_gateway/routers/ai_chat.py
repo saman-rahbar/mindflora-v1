@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from typing import List, Optional, Dict, Any
 import json
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 import sys
 import os
+import time
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -13,8 +14,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from llm_service.llm_client import create_llm_client
 from database.user_service import UserService
 from database.connection import get_db
+from config import Config
 
-router = APIRouter(tags=["AI Chat"])
+router = APIRouter(prefix="/api/v1/ai-chat", tags=["AI Chat"])
 
 class ChatMessage(BaseModel):
     message: str
@@ -38,17 +40,28 @@ class ChatSession(BaseModel):
     action_items: List[Dict[str, Any]]
     insights: Dict[str, Any]
 
-# Initialize LLM client using config
-from config import Config
-
+# Initialize LLM client with proper error handling
 try:
-    llm_config = Config.get_llm_config()
-    llm_client = create_llm_client(**llm_config)
-    print(f"✅ LLM client initialized: {llm_config['client_type']}")
+    # Try to use Ollama with llama2 model
+    llm_client = create_llm_client("ollama", model="llama2:7b")
+    print("✅ LLM client initialized: Ollama (llama2:7b)")
 except Exception as e:
-    print(f"⚠️  Failed to initialize LLM client: {e}")
-    print("🔄 Falling back to mock client")
-    llm_client = create_llm_client("mock")
+    print(f"⚠️  Failed to initialize Ollama client: {e}")
+    try:
+        # Try OpenAI as fallback
+        llm_config = Config.get_llm_config()
+        llm_client = create_llm_client(**llm_config)
+        print(f"✅ LLM client initialized: {llm_config['client_type']}")
+    except Exception as e2:
+        print(f"⚠️  Failed to initialize OpenAI client: {e2}")
+        try:
+            # Try Anthropic as second fallback
+            llm_client = create_llm_client("anthropic")
+            print("✅ LLM client initialized: Anthropic")
+        except Exception as e3:
+            print(f"⚠️  Failed to initialize Anthropic client: {e3}")
+            print("🔄 Falling back to mock client temporarily")
+            llm_client = create_llm_client("mock")
 
 # Store active sessions (in production, use Redis or database)
 active_sessions = {}
@@ -60,79 +73,55 @@ async def send_chat_message(
 ) -> ChatResponse:
     """Send a message to the AI therapist and get a response"""
     try:
-        # Create or get session
-        session_id = chat_message.session_id or f"session_{datetime.now().timestamp()}"
-        
-        if session_id not in active_sessions:
-            active_sessions[session_id] = {
-                "messages": [],
-                "therapy_type": chat_message.therapy_type,
-                "start_time": datetime.now(),
-                "action_items": [],
-                "insights": {}
-            }
-        
-        session = active_sessions[session_id]
-        
-        # Add user message to session
-        user_msg = {
-            "role": "user",
-            "content": chat_message.message,
-            "timestamp": datetime.now()
-        }
-        session["messages"].append(user_msg)
-        
         # Prepare context for LLM
         context = {
-            "therapy_type": chat_message.therapy_type,
-            "user_context": chat_message.user_context or {},
-            "session_history": session["messages"][-10:],  # Last 10 messages for context
-            "action_items": session["action_items"]
+            "therapy_type": chat_message.therapy_type or "cbt",
+            "session_id": chat_message.session_id,
+            "user_context": chat_message.user_context or {}
         }
         
-        # Generate AI response
         print(f"🤖 Generating response for therapy type: {chat_message.therapy_type}")
         print(f"📝 User message: {chat_message.message[:100]}...")
         
         try:
+            # Generate AI response
             ai_response = await llm_client.generate_response(
                 prompt=chat_message.message,
                 context=context
             )
             print(f"✅ AI response generated: {ai_response[:100]}...")
+            
+            # Extract action items (exercises) and insights
+            action_items = extract_action_items(ai_response)
+            insights = extract_insights(ai_response)
+            
+            # Generate suggested topics based on the conversation
+            suggested_topics = generate_suggested_topics(ai_response, chat_message.message)
+            
+            return ChatResponse(
+                response=ai_response,
+                session_id=chat_message.session_id or f"session_{int(time.time())}",
+                action_items=action_items,
+                therapy_insights=insights,
+                suggested_topics=suggested_topics
+            )
+            
         except Exception as e:
             print(f"❌ Error generating AI response: {e}")
             # Fallback response
-            ai_response = "I'm here to support you. Let's work together to explore what's on your mind. What would be most helpful for you right now?"
-        
-        # Add AI response to session
-        ai_msg = {
-            "role": "assistant",
-            "content": ai_response,
-            "timestamp": datetime.now()
-        }
-        session["messages"].append(ai_msg)
-        
-        # Extract action items and insights (simplified for now)
-        action_items = extract_action_items(ai_response)
-        insights = extract_insights(ai_response, chat_message.message)
-        
-        # Update session
-        session["action_items"].extend(action_items)
-        session["insights"].update(insights)
-        
-        return ChatResponse(
-            response=ai_response,
-            session_id=session_id,
-            action_items=action_items,
-            therapy_insights=insights,
-            suggested_topics=generate_suggested_topics(ai_response)
-        )
-        
+            return ChatResponse(
+                response="I'm here to support you. Let's work together to explore what's on your mind. What would be most helpful for you right now?",
+                session_id=chat_message.session_id or f"session_{int(time.time())}",
+                action_items=[],
+                therapy_insights={"themes": [], "mood": None, "progress_notes": []},
+                suggested_topics=[]
+            )
+            
     except ValidationError as e:
+        print(f"❌ Validation error: {e}")
         raise HTTPException(status_code=422, detail=f"Invalid request data: {str(e)}")
     except Exception as e:
-        print(f"❌ Error processing chat message: {str(e)}")
+        print(f"❌ Error processing chat message: {e}")
         raise HTTPException(status_code=500, detail=f"Error processing chat message: {str(e)}")
 
 @router.get("/session/{session_id}")
@@ -218,70 +207,83 @@ async def get_therapy_types():
     }
 
 def extract_action_items(response: str) -> List[Dict[str, Any]]:
-    """Extract action items from AI response - only when explicitly suggested"""
+    """Extract action items from AI response, focusing on exercises and practice tasks"""
     action_items = []
     
-    # Only extract action items when the AI explicitly suggests them
-    explicit_action_phrases = [
-        "try this exercise:", "practice this technique:", "here's an exercise:",
-        "i suggest you try:", "let's practice:", "here's what you can do:",
-        "try this activity:", "practice this skill:", "here's a technique:"
+    # Exercise-specific indicators
+    exercise_indicators = [
+        "exercise:", "practice:", "try this:", "homework:", "assignment:",
+        "try the following", "practice this", "complete this exercise",
+        "do this activity", "your task is"
     ]
     
-    response_lower = response.lower()
+    sentences = response.split('.')
+    current_item = None
     
-    # Check for explicit action suggestions
-    for phrase in explicit_action_phrases:
-        if phrase in response_lower:
-            # Find the sentence containing the action
-            sentences = response.split('.')
-            for sentence in sentences:
-                sentence_lower = sentence.strip().lower()
-                if any(indicator in sentence_lower for indicator in ["try", "practice", "exercise", "activity", "technique"]):
-                    if len(sentence.strip()) > 10:  # Only if it's a substantial suggestion
-                        action_items.append({
-                            "description": sentence.strip().capitalize(),
-                            "created_at": datetime.now().isoformat(),
-                            "completed": False
-                        })
-                        break
+    for sentence in sentences:
+        sentence = sentence.strip().lower()
+        
+        # Check if this sentence starts a new exercise
+        is_exercise = any(sentence.startswith(indicator) for indicator in exercise_indicators)
+        contains_exercise = any(indicator in sentence for indicator in exercise_indicators)
+        
+        if is_exercise or contains_exercise:
+            if current_item:
+                action_items.append(current_item)
+            
+            # Clean up the sentence
+            for indicator in exercise_indicators:
+                if indicator in sentence:
+                    sentence = sentence.replace(indicator, '').strip()
+                    break
+            
+            current_item = {
+                "type": "exercise",
+                "title": "Therapeutic Exercise",
+                "description": sentence.capitalize(),
+                "created_at": datetime.now().isoformat(),
+                "deadline": (datetime.now() + timedelta(days=7)).isoformat(),
+                "completed": False
+            }
+        elif current_item and len(sentence) > 10:  # Continue previous exercise description
+            current_item["description"] += ". " + sentence.capitalize()
     
-    return action_items[:2]  # Limit to 2 action items
+    if current_item:
+        action_items.append(current_item)
+    
+    return action_items
 
-def extract_insights(ai_response: str, user_message: str) -> Dict[str, Any]:
-    """Extract therapeutic insights from the conversation"""
+def extract_insights(response: str) -> Dict[str, Any]:
+    """Extract therapeutic insights from AI response"""
     insights = {
-        "mood_indicators": [],
-        "cognitive_patterns": [],
-        "strengths_identified": [],
-        "areas_for_growth": []
+        "themes": [],
+        "mood": None,
+        "progress_notes": []
     }
     
-    # Simple keyword-based analysis
-    user_lower = user_message.lower()
-    ai_lower = ai_response.lower()
+    # Extract themes
+    theme_indicators = ["notice that", "seems like", "appears to be", "might be feeling"]
+    for indicator in theme_indicators:
+        if indicator in response.lower():
+            start_idx = response.lower().find(indicator)
+            end_idx = response.find(".", start_idx)
+            if end_idx != -1:
+                theme = response[start_idx:end_idx].strip()
+                insights["themes"].append(theme)
     
-    # Mood indicators
-    mood_words = ["anxious", "stressed", "sad", "happy", "excited", "worried", "calm"]
-    for word in mood_words:
-        if word in user_lower:
-            insights["mood_indicators"].append(word)
-    
-    # Cognitive patterns
-    cognitive_patterns = ["always", "never", "everyone", "nobody", "should", "must"]
-    for pattern in cognitive_patterns:
-        if pattern in user_lower:
-            insights["cognitive_patterns"].append(pattern)
-    
-    # Strengths (look for positive language in AI response)
-    strength_words = ["strength", "capable", "resilient", "courageous", "determined"]
-    for word in strength_words:
-        if word in ai_lower:
-            insights["strengths_identified"].append(word)
+    # Extract mood if mentioned
+    mood_indicators = ["feeling", "mood seems", "emotional state"]
+    for indicator in mood_indicators:
+        if indicator in response.lower():
+            start_idx = response.lower().find(indicator)
+            end_idx = response.find(".", start_idx)
+            if end_idx != -1:
+                insights["mood"] = response[start_idx:end_idx].strip()
+                break
     
     return insights
 
-def generate_suggested_topics(ai_response: str) -> List[str]:
+def generate_suggested_topics(ai_response: str, user_message: str) -> List[str]:
     """Generate suggested follow-up topics based on AI response"""
     topics = []
     
