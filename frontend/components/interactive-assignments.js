@@ -433,51 +433,176 @@ class InteractiveAssignments {
 
     showAssignmentWorkspace(assignment) {
         const workspaceHTML = `
-            <div class="assignment-workspace">
-                <div class="workspace-header">
-                    <h3><i class="fas fa-play"></i> Working on: ${assignment.title}</h3>
-                    <button class="btn-icon" onclick="interactiveAssignments.closeWorkspace()">
+            <div class="assignment-workspace-modern">
+                <!-- Header with clear task info -->
+                <div class="workspace-header-modern">
+                    <div class="task-info">
+                        <div class="task-category">
+                            <span class="category-badge ${assignment.category}">${assignment.category.toUpperCase()}</span>
+                        </div>
+                        <h2 class="task-title">${assignment.title}</h2>
+                        <p class="task-description">${assignment.description}</p>
+                        <div class="task-meta">
+                            <span class="estimated-time">
+                                <i class="fas fa-clock"></i> ${assignment.estimated_duration} minutes
+                            </span>
+                            <span class="deadline">
+                                <i class="fas fa-calendar"></i> Due: ${new Date(assignment.deadline).toLocaleDateString()}
+                            </span>
+                        </div>
+                    </div>
+                    <button class="close-btn" onclick="interactiveAssignments.closeWorkspace()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                
-                <div class="workspace-content">
-                    <div class="workspace-timer">
-                        <div class="timer-display">
-                            <span id="timer-minutes">00</span>:<span id="timer-seconds">00</span>
+
+                <!-- Step-by-step guide -->
+                <div class="assignment-steps">
+                    <div class="step-indicator">
+                        <div class="step active" data-step="1">
+                            <div class="step-number">1</div>
+                            <div class="step-label">Prepare</div>
                         </div>
-                        <div class="timer-controls">
-                            <button id="start-timer" class="btn btn-primary">
-                                <i class="fas fa-play"></i> Start Timer
-                            </button>
-                            <button id="pause-timer" class="btn btn-secondary" disabled>
-                                <i class="fas fa-pause"></i> Pause
-                            </button>
-                            <button id="reset-timer" class="btn btn-outline">
-                                <i class="fas fa-redo"></i> Reset
+                        <div class="step" data-step="2">
+                            <div class="step-number">2</div>
+                            <div class="step-label">Practice</div>
+                        </div>
+                        <div class="step" data-step="3">
+                            <div class="step-number">3</div>
+                            <div class="step-label">Reflect</div>
+                        </div>
+                        <div class="step" data-step="4">
+                            <div class="step-number">4</div>
+                            <div class="step-label">Complete</div>
+                        </div>
+                    </div>
+
+                    <!-- Step 1: Preparation -->
+                    <div class="step-content active" id="step-1">
+                        <div class="step-card">
+                            <h3><i class="fas fa-lightbulb"></i> Let's Get Started!</h3>
+                            <div class="instructions">
+                                <h4>Your Task:</h4>
+                                <p class="task-instructions">${assignment.instructions || assignment.description}</p>
+                                
+                                <h4>What You'll Need:</h4>
+                                <ul class="materials-list">
+                                    ${(assignment.materials || ['A quiet space', 'Your phone/computer']).map(material => 
+                                        `<li><i class="fas fa-check-circle"></i> ${material}</li>`
+                                    ).join('')}
+                                </ul>
+                                
+                                <div class="preparation-checklist">
+                                    <h4>Before You Begin:</h4>
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" id="prep-space"> 
+                                        <span class="checkmark"></span>
+                                        I have a quiet, comfortable space
+                                    </label>
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" id="prep-materials"> 
+                                        <span class="checkmark"></span>
+                                        I have all the materials I need
+                                    </label>
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" id="prep-mindset"> 
+                                        <span class="checkmark"></span>
+                                        I'm ready to focus and engage
+                                    </label>
+                                </div>
+                            </div>
+                            <button class="next-step-btn" onclick="interactiveAssignments.nextStep(2)" disabled>
+                                <i class="fas fa-arrow-right"></i> Start Practice
                             </button>
                         </div>
                     </div>
 
-                    <div class="workspace-notes">
-                        <h4><i class="fas fa-sticky-note"></i> Your Notes</h4>
-                        <textarea id="assignment-notes" placeholder="Write your thoughts, progress, or insights here..."></textarea>
-                    </div>
+                    <!-- Step 2: Practice -->
+                    <div class="step-content" id="step-2">
+                        <div class="step-card">
+                            <h3><i class="fas fa-play-circle"></i> Time to Practice</h3>
+                            
+                            <div class="timer-section">
+                                <div class="timer-display-modern">
+                                    <div class="time-circle">
+                                        <span class="time-text">
+                                            <span id="timer-minutes">00</span>:<span id="timer-seconds">00</span>
+                                        </span>
+                                        <div class="time-label">minutes</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="timer-controls-modern">
+                                    <button id="start-timer" class="timer-btn primary">
+                                        <i class="fas fa-play"></i> Start
+                                    </button>
+                                    <button id="pause-timer" class="timer-btn secondary" disabled>
+                                        <i class="fas fa-pause"></i> Pause
+                                    </button>
+                                    <button id="reset-timer" class="timer-btn outline">
+                                        <i class="fas fa-redo"></i> Reset
+                                    </button>
+                                </div>
+                            </div>
 
-                    <div class="workspace-progress">
-                        <h4><i class="fas fa-chart-line"></i> Progress Tracking</h4>
-                        <div class="progress-questions">
-                            ${this.renderProgressQuestions(assignment)}
+                            <div class="practice-notes">
+                                <h4><i class="fas fa-pen"></i> Practice Notes</h4>
+                                <p class="helper-text">Jot down your thoughts, feelings, or observations as you go...</p>
+                                <textarea id="assignment-notes" placeholder="What am I noticing? How am I feeling? What thoughts are coming up?"></textarea>
+                            </div>
+
+                            <button class="next-step-btn" onclick="interactiveAssignments.nextStep(3)">
+                                <i class="fas fa-arrow-right"></i> Move to Reflection
+                            </button>
                         </div>
                     </div>
 
-                    <div class="workspace-actions">
-                        <button class="btn btn-success" onclick="interactiveAssignments.completeAssignment('${assignment.id}')">
-                            <i class="fas fa-check"></i> Complete Assignment
-                        </button>
-                        <button class="btn btn-outline" onclick="interactiveAssignments.saveProgress('${assignment.id}')">
-                            <i class="fas fa-save"></i> Save Progress
-                        </button>
+                    <!-- Step 3: Reflection -->
+                    <div class="step-content" id="step-3">
+                        <div class="step-card">
+                            <h3><i class="fas fa-heart"></i> Time to Reflect</h3>
+                            <p class="step-description">Take a moment to process your experience and capture your insights.</p>
+                            
+                            <div class="reflection-questions">
+                                ${this.renderReflectionQuestions(assignment)}
+                            </div>
+
+                            <button class="next-step-btn" onclick="interactiveAssignments.nextStep(4)">
+                                <i class="fas fa-arrow-right"></i> Finish Up
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Completion -->
+                    <div class="step-content" id="step-4">
+                        <div class="step-card">
+                            <h3><i class="fas fa-trophy"></i> You're Almost Done!</h3>
+                            <p class="step-description">Review your work and mark this assignment as complete.</p>
+                            
+                            <div class="completion-summary">
+                                <div class="summary-item">
+                                    <i class="fas fa-clock"></i>
+                                    <span>Time Spent: <span id="final-time">--</span></span>
+                                </div>
+                                <div class="summary-item">
+                                    <i class="fas fa-edit"></i>
+                                    <span>Notes Written: <span id="notes-count">0</span> characters</span>
+                                </div>
+                                <div class="summary-item">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>Reflections: <span id="reflections-count">0</span>/4 completed</span>
+                                </div>
+                            </div>
+
+                            <div class="completion-actions">
+                                <button class="complete-btn" onclick="interactiveAssignments.completeAssignment('${assignment.id}')">
+                                    <i class="fas fa-check"></i> Complete Assignment
+                                </button>
+                                <button class="save-btn" onclick="interactiveAssignments.saveProgress('${assignment.id}')">
+                                    <i class="fas fa-save"></i> Save for Later
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -485,7 +610,29 @@ class InteractiveAssignments {
 
         // Replace main content with workspace
         this.container.innerHTML = workspaceHTML;
-        this.setupWorkspaceEventListeners();
+        this.setupModernWorkspaceEventListeners();
+    }
+
+    renderReflectionQuestions(assignment) {
+        const questions = assignment.progress_questions || [
+            'How are you feeling about this assignment?',
+            'What challenges did you encounter?',
+            'What insights did you gain?',
+            'How can you apply this learning?'
+        ];
+
+        return questions.map((question, index) => `
+            <div class="reflection-question">
+                <div class="question-header">
+                    <h5><i class="fas fa-question-circle"></i> ${question}</h5>
+                </div>
+                <textarea 
+                    id="answer-${index}" 
+                    placeholder="Take your time to reflect and share your thoughts..."
+                    class="reflection-textarea"
+                ></textarea>
+            </div>
+        `).join('');
     }
 
     renderProgressQuestions(assignment) {
@@ -504,7 +651,113 @@ class InteractiveAssignments {
         `).join('');
     }
 
-    setupWorkspaceEventListeners() {
+    setupModernWorkspaceEventListeners() {
+        // Setup preparation checklist
+        this.setupPreparationChecklist();
+        
+        // Setup timer functionality
+        this.setupTimerFunctionality();
+        
+        // Setup progress tracking
+        this.setupProgressTracking();
+    }
+
+    setupPreparationChecklist() {
+        const checkboxes = document.querySelectorAll('.preparation-checklist input[type="checkbox"]');
+        const nextBtn = document.querySelector('.next-step-btn[onclick*="nextStep(2)"]');
+        
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                if (nextBtn) {
+                    nextBtn.disabled = !allChecked;
+                    if (allChecked) {
+                        nextBtn.classList.add('ready');
+                    } else {
+                        nextBtn.classList.remove('ready');
+                    }
+                }
+            });
+        });
+    }
+
+    nextStep(stepNumber) {
+        // Hide all step contents
+        document.querySelectorAll('.step-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        
+        // Hide all step indicators
+        document.querySelectorAll('.step').forEach(step => {
+            step.classList.remove('active');
+        });
+        
+        // Show target step
+        const targetStep = document.getElementById(`step-${stepNumber}`);
+        const targetIndicator = document.querySelector(`[data-step="${stepNumber}"]`);
+        
+        if (targetStep) targetStep.classList.add('active');
+        if (targetIndicator) targetIndicator.classList.add('active');
+        
+        // Mark previous steps as completed
+        for (let i = 1; i < stepNumber; i++) {
+            const prevStep = document.querySelector(`[data-step="${i}"]`);
+            if (prevStep) prevStep.classList.add('completed');
+        }
+        
+        // Update progress tracking if moving to final step
+        if (stepNumber === 4) {
+            this.updateCompletionSummary();
+        }
+    }
+
+    updateCompletionSummary() {
+        // Update time spent
+        const timeDisplay = document.querySelector('#final-time');
+        const minutes = document.querySelector('#timer-minutes').textContent;
+        const seconds = document.querySelector('#timer-seconds').textContent;
+        if (timeDisplay) {
+            timeDisplay.textContent = `${minutes}:${seconds}`;
+        }
+        
+        // Update notes count
+        const notesTextarea = document.querySelector('#assignment-notes');
+        const notesCount = document.querySelector('#notes-count');
+        if (notesTextarea && notesCount) {
+            notesCount.textContent = notesTextarea.value.length;
+        }
+        
+        // Update reflections count
+        const reflectionTextareas = document.querySelectorAll('.reflection-textarea');
+        const reflectionsCount = document.querySelector('#reflections-count');
+        if (reflectionsCount) {
+            const completed = Array.from(reflectionTextareas).filter(textarea => textarea.value.trim().length > 0).length;
+            reflectionsCount.textContent = completed;
+        }
+    }
+
+    setupProgressTracking() {
+        // Track notes changes
+        document.addEventListener('input', (e) => {
+            if (e.target.id === 'assignment-notes') {
+                const notesCount = document.querySelector('#notes-count');
+                if (notesCount) {
+                    notesCount.textContent = e.target.value.length;
+                }
+            }
+            
+            if (e.target.classList.contains('reflection-textarea')) {
+                const reflectionTextareas = document.querySelectorAll('.reflection-textarea');
+                const reflectionsCount = document.querySelector('#reflections-count');
+                if (reflectionsCount) {
+                    const completed = Array.from(reflectionTextareas).filter(textarea => textarea.value.trim().length > 0).length;
+                    reflectionsCount.textContent = completed;
+                }
+            }
+        });
+    }
+
+    setupTimerFunctionality() {
         // Timer functionality
         let timerInterval;
         let timeElapsed = 0;
