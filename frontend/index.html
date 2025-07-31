@@ -915,14 +915,14 @@
                 };
                 console.log('Mood data:', moodData);
                 
-                const response = await apiCall('/analytics/mood', {
+                const response = await apiCall('/journaling/mood', {
                     method: 'POST',
                     body: JSON.stringify(moodData)
                 });
 
                 console.log('Mood tracking response:', response);
                 
-                if (response && response.success) {
+                if (response && response.message === 'Mood tracked successfully') {
                     showMessage('Mood tracked successfully!', 'success');
                     selectedMood = null;
                     // Reset mood selection
