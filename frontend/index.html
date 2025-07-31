@@ -1334,6 +1334,14 @@
 
         async function startAssignmentFromTherapy(homeworkDescription) {
             console.log('Starting assignment from therapy with description:', homeworkDescription);
+            
+            // Validate input
+            if (!homeworkDescription || homeworkDescription.trim() === '') {
+                console.error('No homework description provided');
+                showMessage('Error: No assignment description provided', 'error');
+                return;
+            }
+            
             try {
                 // Create a new assignment from the therapy homework
                 const assignmentData = {
@@ -1351,11 +1359,13 @@
                     ]
                 };
 
-                const response = await apiCall('therapy/assignments', {
+                console.log('Sending assignment data:', assignmentData);
+                const response = await apiCall('/therapy/assignments', {
                     method: 'POST',
                     body: JSON.stringify(assignmentData)
                 });
 
+                console.log('Assignment creation response:', response);
                 if (response && response.success) {
                     showMessage('Assignment created! Navigate to Assignments tab to start.', 'success');
                     // Switch to assignments tab
@@ -1368,7 +1378,9 @@
                     showSection('assignments');
                 }
             } catch (error) {
-                showMessage('Error creating assignment: ' + error.message, 'error');
+                console.error('Full error object:', error);
+                console.error('Error stack:', error.stack);
+                showMessage('Error creating assignment: ' + (error.message || 'Unknown error'), 'error');
             }
         }
 
