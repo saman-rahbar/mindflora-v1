@@ -14,7 +14,7 @@ from llm_service.llm_client import create_llm_client
 from database.user_service import UserService
 from database.connection import get_db
 
-router = APIRouter(prefix="/api/v1/ai-chat", tags=["AI Chat"])
+router = APIRouter(tags=["AI Chat"])
 
 class ChatMessage(BaseModel):
     message: str

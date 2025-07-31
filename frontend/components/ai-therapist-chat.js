@@ -412,7 +412,7 @@ class AITherapistChat {
 
     async saveActionItem(actionItem) {
         try {
-            await apiCall('therapy/action-items', {
+            await apiCall('/api/v1/therapy/action-items', {
                 method: 'POST',
                 body: JSON.stringify(actionItem)
             });
@@ -455,7 +455,7 @@ class AITherapistChat {
 
     async updateActionItem(actionItem) {
         try {
-            await apiCall(`therapy/action-items/${actionItem.id}`, {
+            await apiCall(`/api/v1/therapy/action-items/${actionItem.id}`, {
                 method: 'PUT',
                 body: JSON.stringify(actionItem)
             });
@@ -466,7 +466,7 @@ class AITherapistChat {
 
     async deleteActionItemFromBackend(itemId) {
         try {
-            await apiCall(`therapy/action-items/${itemId}`, {
+            await apiCall(`/api/v1/therapy/action-items/${itemId}`, {
                 method: 'DELETE'
             });
         } catch (error) {
