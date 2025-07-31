@@ -362,17 +362,4 @@ def create_llm_client(client_type: str = "mock", **kwargs) -> LLMClient:
     else:
         return MockLLMClient()
 
-# Global LLM client instance
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
-try:
-    from config import Config
-    # Create LLM client based on configuration
-    llm_config = Config.get_llm_config()
-    llm_client = create_llm_client(**llm_config)
-except ImportError:
-    # Fallback to mock client if config import fails
-    print("Warning: Could not import config, using mock LLM client")
-    llm_client = create_llm_client("mock") 
+# Note: LLM client is initialized in the router files 

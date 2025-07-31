@@ -38,8 +38,17 @@ class ChatSession(BaseModel):
     action_items: List[Dict[str, Any]]
     insights: Dict[str, Any]
 
-# Initialize LLM client - use mock for now to ensure it works
-llm_client = create_llm_client("mock")
+# Initialize LLM client using config
+from config import Config
+
+try:
+    llm_config = Config.get_llm_config()
+    llm_client = create_llm_client(**llm_config)
+    print(f"✅ LLM client initialized: {llm_config['client_type']}")
+except Exception as e:
+    print(f"⚠️  Failed to initialize LLM client: {e}")
+    print("🔄 Falling back to mock client")
+    llm_client = create_llm_client("mock")
 
 # Store active sessions (in production, use Redis or database)
 active_sessions = {}
@@ -82,10 +91,19 @@ async def send_chat_message(
         }
         
         # Generate AI response
-        ai_response = await llm_client.generate_response(
-            prompt=chat_message.message,
-            context=context
-        )
+        print(f"🤖 Generating response for therapy type: {chat_message.therapy_type}")
+        print(f"📝 User message: {chat_message.message[:100]}...")
+        
+        try:
+            ai_response = await llm_client.generate_response(
+                prompt=chat_message.message,
+                context=context
+            )
+            print(f"✅ AI response generated: {ai_response[:100]}...")
+        except Exception as e:
+            print(f"❌ Error generating AI response: {e}")
+            # Fallback response
+            ai_response = "I'm here to support you. Let's work together to explore what's on your mind. What would be most helpful for you right now?"
         
         # Add AI response to session
         ai_msg = {

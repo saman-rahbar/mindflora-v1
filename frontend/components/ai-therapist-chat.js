@@ -293,6 +293,12 @@ class AITherapistChat {
         try {
             // Get user context for personalization
             const userContext = this.getUserContext();
+            console.log('🔍 Sending message to AI therapist:', {
+                message: userMessage,
+                session_id: this.currentSession?.id,
+                therapy_type: this.currentSession?.therapyType || 'cbt',
+                user_context: userContext
+            });
             
             const response = await apiCall('/ai-chat/send-message', {
                 method: 'POST',
@@ -303,6 +309,8 @@ class AITherapistChat {
                     user_context: userContext
                 })
             });
+            
+            console.log('📨 AI response received:', response);
             
             if (response && response.response) {
                 // Update session with new data
