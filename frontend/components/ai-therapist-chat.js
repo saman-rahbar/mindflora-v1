@@ -223,7 +223,7 @@ class AITherapistChat {
 
         if (newSessionBtn) {
             newSessionBtn.addEventListener('click', () => {
-                this.startNewSession();
+                this.resetSession();
             });
         }
     }
@@ -496,10 +496,17 @@ class AITherapistChat {
         URL.revokeObjectURL(url);
     }
 
-    startNewSession() {
+    resetSession() {
         this.messages = [];
         this.actionItems = [];
-        this.startNewSession();
+        this.currentSession = {
+            id: Date.now(),
+            startTime: new Date(),
+            messages: [],
+            actionItems: [],
+            mood: null,
+            topics: []
+        };
         this.render();
     }
 
