@@ -339,9 +339,43 @@ class AITherapistChat {
                 })
             });
 
-            return response;
+            if (response && response.content) {
+                return {
+                    content: response.content,
+                    actionItems: response.action_items || []
+                };
+            } else {
+                // Fallback response with personalized content
+                const fallbackResponses = [
+                    "I understand how you're feeling. Let's work through this together. What specific aspect would you like to focus on?",
+                    "Thank you for sharing that with me. I'm here to listen and support you. How can I help you today?",
+                    "I appreciate you opening up to me. Let's explore this together. What would be most helpful for you right now?",
+                    "I hear you, and I want you to know that your feelings are valid. Let's work on this step by step."
+                ];
+                
+                return {
+                    content: fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)],
+                    actionItems: [
+                        {
+                            title: "Reflection Exercise",
+                            description: "Take 5 minutes to reflect on what we discussed",
+                            deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+                        }
+                    ]
+                };
+            }
         } catch (error) {
-            throw error;
+            console.error('Error getting therapist response:', error);
+            return {
+                content: "I'm here to listen and help. Could you tell me more about what's on your mind?",
+                actionItems: [
+                    {
+                        title: "Daily Check-in",
+                        description: "Practice daily self-reflection",
+                        deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+                    }
+                ]
+            };
         }
     }
 

@@ -663,13 +663,7 @@
                     </button>
                 </div>
                 
-                <!-- Traditional Therapy Option -->
-                <div style="background: rgba(0, 122, 255, 0.1); color: #1d1d1f; padding: 20px; border-radius: 16px; margin-bottom: 24px; border: 1px solid rgba(0, 122, 255, 0.2); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
-                    <h3 style="color: #007AFF; margin-bottom: 16px; font-weight: 600;"><i class="fas fa-robot"></i> Traditional Therapy</h3>
-                    <p style="margin-bottom: 8px; color: #86868b;"><strong>Choose your therapy type</strong> - select from specific modalities</p>
-                    <p style="margin-bottom: 8px; color: #86868b;"><strong>AI Agent:</strong> LLM-Powered Therapy Agent with real-time analysis</p>
-                    <p style="margin-bottom: 0; color: #86868b;"><strong>Privacy:</strong> All data processed with Local Differential Privacy protection</p>
-                </div>
+
                 
                 <!-- Smart Therapy Form (Hidden by default) -->
                 <form id="smart-therapy-form" style="display: none;">
@@ -686,30 +680,7 @@
                     </button>
                 </form>
                 
-                <!-- Traditional Therapy Form -->
-                <form id="therapy-form">
-                    <div class="form-group">
-                        <label for="therapy-type">Therapy Type</label>
-                        <select id="therapy-type" required>
-                            <option value="">Select therapy type...</option>
-                            <option value="cbt">Cognitive Behavioral Therapy (CBT)</option>
-                            <option value="logotherapy">Logotherapy</option>
-                            <option value="act">Acceptance & Commitment Therapy (ACT)</option>
-                            <option value="dbt">Dialectical Behavior Therapy (DBT)</option>
-                            <option value="somotherapy">Somotherapy</option>
-                            <option value="positive_psychology">Positive Psychology</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="session-content">What's on your mind today?</label>
-                        <textarea id="session-content" rows="6" placeholder="Share your thoughts, feelings, or concerns..." required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="mood-before">How are you feeling? (1-10)</label>
-                        <input type="number" id="mood-before" min="1" max="10" placeholder="Rate your mood">
-                    </div>
-                    <button type="submit" class="btn">Start Session</button>
-                </form>
+
             </div>
 
             <div class="card">
@@ -1287,6 +1258,9 @@
                                 <p><strong>${(homework.type || 'personalized_assignment').replace('_', ' ').toUpperCase()}</strong></p>
                                 <p>${homework.description || 'Complete your personalized homework assignment'}</p>
                                 <p><small>Duration: ${homework.duration || '1 week'}</small></p>
+                                <button class="btn btn-primary" style="margin-top: 10px;" onclick="startAssignmentFromTherapy('${homework.description || 'Complete your personalized homework assignment'}')">
+                                    <i class="fas fa-play"></i> Start Assignment
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1345,6 +1319,41 @@
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
         });
+
+        async function startAssignmentFromTherapy(homeworkDescription) {
+            try {
+                // Create a new assignment from the therapy homework
+                const assignmentData = {
+                    title: "Therapy Homework",
+                    description: homeworkDescription,
+                    category: "homework",
+                    estimated_duration: 30,
+                    deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                    instructions: homeworkDescription,
+                    materials: ["Journal", "Quiet space"],
+                    progress_questions: [
+                        "How did you feel about this assignment?",
+                        "What insights did you gain?",
+                        "How can you apply this learning?"
+                    ]
+                };
+
+                const response = await apiCall('therapy/assignments', {
+                    method: 'POST',
+                    body: JSON.stringify(assignmentData)
+                });
+
+                if (response && response.success) {
+                    showMessage('Assignment created! Navigate to Assignments tab to start.', 'success');
+                    // Switch to assignments tab
+                    showSection('assignments');
+                } else {
+                    showMessage('Failed to create assignment', 'error');
+                }
+            } catch (error) {
+                showMessage('Error creating assignment: ' + error.message, 'error');
+            }
+        }
 
         function displayTherapyResults(response) {
             const aiResponse = response.ai_response;
