@@ -1,0 +1,598 @@
+// Interactive Assignments Component
+class InteractiveAssignments {
+    constructor() {
+        this.container = null;
+        this.assignments = [];
+        this.currentAssignment = null;
+        this.categories = {
+            'homework': { icon: 'fas fa-book', color: '#007AFF' },
+            'exercise': { icon: 'fas fa-dumbbell', color: '#00B894' },
+            'meditation': { icon: 'fas fa-om', color: '#6C5CE7' },
+            'journaling': { icon: 'fas fa-pen', color: '#FF6B6B' },
+            'social': { icon: 'fas fa-users', color: '#FD79A8' },
+            'self-care': { icon: 'fas fa-heart', color: '#FFD93D' }
+        };
+    }
+
+    async init(containerId) {
+        this.container = document.getElementById(containerId);
+        if (!this.container) {
+            console.error('Interactive assignments container not found');
+            return;
+        }
+
+        await this.loadAssignments();
+        this.render();
+        this.setupEventListeners();
+    }
+
+    async loadAssignments() {
+        try {
+            const response = await apiCall('therapy/assignments');
+            this.assignments = response.data || [];
+        } catch (error) {
+            console.error('Error loading assignments:', error);
+        }
+    }
+
+    render() {
+        this.container.innerHTML = `
+            <div class="interactive-assignments">
+                <div class="assignments-header">
+                    <h2><i class="fas fa-tasks"></i> Your Assignments</h2>
+                    <div class="assignments-stats">
+                        <div class="stat-item">
+                            <span class="stat-number">${this.getActiveCount()}</span>
+                            <span class="stat-label">Active</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">${this.getCompletedCount()}</span>
+                            <span class="stat-label">Completed</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">${this.calculateCompletionRate()}%</span>
+                            <span class="stat-label">Success Rate</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Assignment Categories -->
+                <div class="assignment-categories">
+                    <button class="category-btn active" data-category="all">
+                        <i class="fas fa-th"></i> All
+                    </button>
+                    ${Object.entries(this.categories).map(([category, info]) => `
+                        <button class="category-btn" data-category="${category}">
+                            <i class="${info.icon}"></i> ${category.charAt(0).toUpperCase() + category.slice(1)}
+                        </button>
+                    `).join('')}
+                </div>
+
+                <!-- Assignments Grid -->
+                <div class="assignments-grid">
+                    ${this.renderAssignments()}
+                </div>
+
+                <!-- Assignment Detail Modal -->
+                <div id="assignment-modal" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 id="modal-title"></h3>
+                            <button class="modal-close">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="modal-content"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Tracking -->
+                <div class="progress-tracking">
+                    <h3><i class="fas fa-chart-line"></i> Progress Overview</h3>
+                    <div class="progress-cards">
+                        ${this.renderProgressCards()}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderAssignments() {
+        if (this.assignments.length === 0) {
+            return `
+                <div class="empty-assignments">
+                    <i class="fas fa-clipboard-list"></i>
+                    <h3>No assignments yet</h3>
+                    <p>Start a therapy session to receive personalized assignments!</p>
+                    <button class="btn btn-primary" onclick="interactiveAssignments.startTherapySession()">
+                        <i class="fas fa-comments"></i> Start Therapy Session
+                    </button>
+                </div>
+            `;
+        }
+
+        return this.assignments.map(assignment => `
+            <div class="assignment-card ${assignment.status}" 
+                 data-category="${assignment.category || 'general'}"
+                 onclick="interactiveAssignments.openAssignment('${assignment.id}')">
+                <div class="assignment-header">
+                    <div class="assignment-icon" style="color: ${this.categories[assignment.category]?.color || '#6C757D'}">
+                        <i class="${this.categories[assignment.category]?.icon || 'fas fa-star'}"></i>
+                    </div>
+                    <div class="assignment-status">
+                        <span class="status-badge ${assignment.status}">${assignment.status}</span>
+                    </div>
+                </div>
+                <div class="assignment-content">
+                    <h4>${assignment.title}</h4>
+                    <p>${assignment.description}</p>
+                    <div class="assignment-meta">
+                        <span class="assignment-category">${assignment.category || 'General'}</span>
+                        <span class="assignment-duration">${assignment.estimated_duration || '15 min'}</span>
+                    </div>
+                    ${assignment.deadline ? `
+                        <div class="assignment-deadline">
+                            <i class="fas fa-calendar"></i>
+                            <span>Due: ${this.formatDate(assignment.deadline)}</span>
+                        </div>
+                    ` : ''}
+                    ${assignment.progress ? `
+                        <div class="assignment-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${assignment.progress}%"></div>
+                            </div>
+                            <span class="progress-text">${assignment.progress}% complete</span>
+                        </div>
+                    ` : ''}
+                </div>
+                <div class="assignment-actions">
+                    <button class="btn-icon" onclick="interactiveAssignments.startAssignment('${assignment.id}')">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <button class="btn-icon" onclick="interactiveAssignments.editAssignment('${assignment.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderProgressCards() {
+        const categoryProgress = {};
+        
+        this.assignments.forEach(assignment => {
+            const category = assignment.category || 'general';
+            if (!categoryProgress[category]) {
+                categoryProgress[category] = { total: 0, completed: 0, active: 0 };
+            }
+            categoryProgress[category].total++;
+            if (assignment.status === 'completed') {
+                categoryProgress[category].completed++;
+            } else if (assignment.status === 'active') {
+                categoryProgress[category].active++;
+            }
+        });
+
+        return Object.entries(categoryProgress).map(([category, progress]) => {
+            const percentage = Math.round((progress.completed / progress.total) * 100);
+            const categoryInfo = this.categories[category] || { icon: 'fas fa-star', color: '#6C757D' };
+            
+            return `
+                <div class="progress-card">
+                    <div class="progress-icon" style="color: ${categoryInfo.color}">
+                        <i class="${categoryInfo.icon}"></i>
+                    </div>
+                    <div class="progress-info">
+                        <h4>${category.charAt(0).toUpperCase() + category.slice(1)}</h4>
+                        <div class="progress-stats">
+                            <span>${progress.completed}/${progress.total}</span>
+                            <span class="progress-percentage">${percentage}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    setupEventListeners() {
+        // Category filter buttons
+        const categoryButtons = document.querySelectorAll('.category-btn');
+        categoryButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                this.filterByCategory(button.dataset.category);
+                
+                // Update active button
+                categoryButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+            });
+        });
+
+        // Modal close button
+        const modalClose = document.querySelector('.modal-close');
+        if (modalClose) {
+            modalClose.addEventListener('click', () => {
+                this.hideAssignmentModal();
+            });
+        }
+
+        // Close modal when clicking outside
+        const modal = document.getElementById('assignment-modal');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.hideAssignmentModal();
+                }
+            });
+        }
+    }
+
+    filterByCategory(category) {
+        const assignmentCards = document.querySelectorAll('.assignment-card');
+        
+        assignmentCards.forEach(card => {
+            if (category === 'all' || card.dataset.category === category) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    openAssignment(assignmentId) {
+        const assignment = this.assignments.find(a => a.id === assignmentId);
+        if (!assignment) return;
+
+        this.currentAssignment = assignment;
+        this.showAssignmentModal(assignment);
+    }
+
+    showAssignmentModal(assignment) {
+        const modal = document.getElementById('assignment-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalContent = document.getElementById('modal-content');
+
+        modalTitle.textContent = assignment.title;
+        modalContent.innerHTML = `
+            <div class="assignment-detail">
+                <div class="detail-header">
+                    <div class="detail-icon" style="color: ${this.categories[assignment.category]?.color || '#6C757D'}">
+                        <i class="${this.categories[assignment.category]?.icon || 'fas fa-star'}"></i>
+                    </div>
+                    <div class="detail-info">
+                        <h4>${assignment.title}</h4>
+                        <p>${assignment.description}</p>
+                    </div>
+                </div>
+                
+                <div class="detail-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Category</span>
+                        <span class="stat-value">${assignment.category || 'General'}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Duration</span>
+                        <span class="stat-value">${assignment.estimated_duration || '15 min'}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Status</span>
+                        <span class="stat-value ${assignment.status}">${assignment.status}</span>
+                    </div>
+                    ${assignment.deadline ? `
+                        <div class="stat-item">
+                            <span class="stat-label">Deadline</span>
+                            <span class="stat-value">${this.formatDate(assignment.deadline)}</span>
+                        </div>
+                    ` : ''}
+                </div>
+
+                ${assignment.instructions ? `
+                    <div class="detail-instructions">
+                        <h5>Instructions</h5>
+                        <div class="instructions-content">
+                            ${assignment.instructions}
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${assignment.materials ? `
+                    <div class="detail-materials">
+                        <h5>Materials Needed</h5>
+                        <ul>
+                            ${assignment.materials.map(material => `
+                                <li><i class="fas fa-check"></i> ${material}</li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+
+                <div class="assignment-actions">
+                    <button class="btn btn-primary" onclick="interactiveAssignments.startAssignment('${assignment.id}')">
+                        <i class="fas fa-play"></i> Start Assignment
+                    </button>
+                    <button class="btn btn-secondary" onclick="interactiveAssignments.markComplete('${assignment.id}')">
+                        <i class="fas fa-check"></i> Mark Complete
+                    </button>
+                    <button class="btn btn-outline" onclick="interactiveAssignments.logProgress('${assignment.id}')">
+                        <i class="fas fa-edit"></i> Log Progress
+                    </button>
+                </div>
+            </div>
+        `;
+
+        modal.style.display = 'block';
+    }
+
+    hideAssignmentModal() {
+        const modal = document.getElementById('assignment-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    async startAssignment(assignmentId) {
+        const assignment = this.assignments.find(a => a.id === assignmentId);
+        if (!assignment) return;
+
+        // Update assignment status
+        assignment.status = 'active';
+        assignment.started_at = new Date();
+
+        // Save to backend
+        await this.updateAssignment(assignment);
+
+        // Show assignment workspace
+        this.showAssignmentWorkspace(assignment);
+    }
+
+    showAssignmentWorkspace(assignment) {
+        const workspaceHTML = `
+            <div class="assignment-workspace">
+                <div class="workspace-header">
+                    <h3><i class="fas fa-play"></i> Working on: ${assignment.title}</h3>
+                    <button class="btn-icon" onclick="interactiveAssignments.closeWorkspace()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="workspace-content">
+                    <div class="workspace-timer">
+                        <div class="timer-display">
+                            <span id="timer-minutes">00</span>:<span id="timer-seconds">00</span>
+                        </div>
+                        <div class="timer-controls">
+                            <button id="start-timer" class="btn btn-primary">
+                                <i class="fas fa-play"></i> Start Timer
+                            </button>
+                            <button id="pause-timer" class="btn btn-secondary" disabled>
+                                <i class="fas fa-pause"></i> Pause
+                            </button>
+                            <button id="reset-timer" class="btn btn-outline">
+                                <i class="fas fa-redo"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="workspace-notes">
+                        <h4><i class="fas fa-sticky-note"></i> Your Notes</h4>
+                        <textarea id="assignment-notes" placeholder="Write your thoughts, progress, or insights here..."></textarea>
+                    </div>
+
+                    <div class="workspace-progress">
+                        <h4><i class="fas fa-chart-line"></i> Progress Tracking</h4>
+                        <div class="progress-questions">
+                            ${this.renderProgressQuestions(assignment)}
+                        </div>
+                    </div>
+
+                    <div class="workspace-actions">
+                        <button class="btn btn-success" onclick="interactiveAssignments.completeAssignment('${assignment.id}')">
+                            <i class="fas fa-check"></i> Complete Assignment
+                        </button>
+                        <button class="btn btn-outline" onclick="interactiveAssignments.saveProgress('${assignment.id}')">
+                            <i class="fas fa-save"></i> Save Progress
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Replace main content with workspace
+        this.container.innerHTML = workspaceHTML;
+        this.setupWorkspaceEventListeners();
+    }
+
+    renderProgressQuestions(assignment) {
+        const questions = assignment.progress_questions || [
+            'How are you feeling about this assignment?',
+            'What challenges did you encounter?',
+            'What insights did you gain?',
+            'How can you apply this learning?'
+        ];
+
+        return questions.map((question, index) => `
+            <div class="progress-question">
+                <label>${question}</label>
+                <textarea id="answer-${index}" placeholder="Your answer..."></textarea>
+            </div>
+        `).join('');
+    }
+
+    setupWorkspaceEventListeners() {
+        // Timer functionality
+        let timerInterval;
+        let timeElapsed = 0;
+        let isRunning = false;
+
+        const startBtn = document.getElementById('start-timer');
+        const pauseBtn = document.getElementById('pause-timer');
+        const resetBtn = document.getElementById('reset-timer');
+
+        if (startBtn) {
+            startBtn.addEventListener('click', () => {
+                if (!isRunning) {
+                    isRunning = true;
+                    startBtn.disabled = true;
+                    pauseBtn.disabled = false;
+                    
+                    timerInterval = setInterval(() => {
+                        timeElapsed++;
+                        this.updateTimerDisplay(timeElapsed);
+                    }, 1000);
+                }
+            });
+        }
+
+        if (pauseBtn) {
+            pauseBtn.addEventListener('click', () => {
+                if (isRunning) {
+                    isRunning = false;
+                    startBtn.disabled = false;
+                    pauseBtn.disabled = true;
+                    clearInterval(timerInterval);
+                }
+            });
+        }
+
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                timeElapsed = 0;
+                isRunning = false;
+                startBtn.disabled = false;
+                pauseBtn.disabled = true;
+                clearInterval(timerInterval);
+                this.updateTimerDisplay(0);
+            });
+        }
+    }
+
+    updateTimerDisplay(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        
+        document.getElementById('timer-minutes').textContent = minutes.toString().padStart(2, '0');
+        document.getElementById('timer-seconds').textContent = remainingSeconds.toString().padStart(2, '0');
+    }
+
+    async completeAssignment(assignmentId) {
+        const assignment = this.assignments.find(a => a.id === assignmentId);
+        if (!assignment) return;
+
+        // Get notes and progress
+        const notes = document.getElementById('assignment-notes')?.value || '';
+        const answers = [];
+        for (let i = 0; i < 4; i++) {
+            const answer = document.getElementById(`answer-${i}`)?.value || '';
+            answers.push(answer);
+        }
+
+        // Update assignment
+        assignment.status = 'completed';
+        assignment.completed_at = new Date();
+        assignment.notes = notes;
+        assignment.progress_answers = answers;
+        assignment.progress = 100;
+
+        // Save to backend
+        await this.updateAssignment(assignment);
+
+        // Show completion message
+        this.showCompletionMessage(assignment);
+
+        // Return to assignments view
+        setTimeout(() => {
+            this.render();
+        }, 3000);
+    }
+
+    showCompletionMessage(assignment) {
+        this.container.innerHTML = `
+            <div class="completion-message">
+                <div class="completion-icon">
+                    <i class="fas fa-trophy"></i>
+                </div>
+                <h3>Assignment Completed!</h3>
+                <p>Great job completing "${assignment.title}"!</p>
+                <div class="completion-stats">
+                    <div class="stat">
+                        <span class="stat-number">+50</span>
+                        <span class="stat-label">XP Earned</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">1</span>
+                        <span class="stat-label">Achievement Unlocked</span>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="interactiveAssignments.render()">
+                    <i class="fas fa-arrow-left"></i> Back to Assignments
+                </button>
+            </div>
+        `;
+    }
+
+    async saveProgress(assignmentId) {
+        const assignment = this.assignments.find(a => a.id === assignmentId);
+        if (!assignment) return;
+
+        const notes = document.getElementById('assignment-notes')?.value || '';
+        assignment.notes = notes;
+        assignment.progress = Math.min(assignment.progress + 25, 100);
+
+        await this.updateAssignment(assignment);
+
+        this.showMessage('Progress saved successfully!', 'success');
+    }
+
+    async updateAssignment(assignment) {
+        try {
+            await apiCall(`therapy/assignments/${assignment.id}`, {
+                method: 'PUT',
+                body: JSON.stringify(assignment)
+            });
+        } catch (error) {
+            console.error('Error updating assignment:', error);
+        }
+    }
+
+    getActiveCount() {
+        return this.assignments.filter(a => a.status === 'active').length;
+    }
+
+    getCompletedCount() {
+        return this.assignments.filter(a => a.status === 'completed').length;
+    }
+
+    calculateCompletionRate() {
+        if (this.assignments.length === 0) return 0;
+        const completed = this.getCompletedCount();
+        return Math.round((completed / this.assignments.length) * 100);
+    }
+
+    formatDate(dateString) {
+        if (!dateString) return 'No deadline';
+        const date = new Date(dateString);
+        return date.toLocaleDateString();
+    }
+
+    showMessage(message, type = 'info') {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message message-${type}`;
+        messageDiv.textContent = message;
+        
+        this.container.appendChild(messageDiv);
+        
+        setTimeout(() => {
+            messageDiv.remove();
+        }, 3000);
+    }
+
+    startTherapySession() {
+        // Navigate to therapy session
+        window.location.hash = '#therapy';
+    }
+}
+
+// Initialize the interactive assignments
+const interactiveAssignments = new InteractiveAssignments(); 
