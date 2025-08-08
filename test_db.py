@@ -26,20 +26,26 @@ def test_database():
         # Test user service
         user_service = UserService(db)
         
-        # Create a test user
+        # Create a test user with unique data
+        import uuid
+        import time
+        
+        unique_id = str(uuid.uuid4())[:8]
+        timestamp = int(time.time())
+        
         pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
         hashed_password = pwd_context.hash("testpass123")
         
         user = user_service.create_user(
-            username="test_user",
-            email="test@example.com",
+            username=f"test_user_{unique_id}",
+            email=f"test_{timestamp}@example.com",
             hashed_password=hashed_password
         )
         
         print(f"✅ User created: {user.username} ({user.id})")
         
         # Test retrieving user
-        retrieved_user = user_service.get_user_by_email("test@example.com")
+        retrieved_user = user_service.get_user_by_email(f"test_{timestamp}@example.com")
         if retrieved_user:
             print(f"✅ User retrieved: {retrieved_user.username}")
         else:
